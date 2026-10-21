@@ -2,7 +2,7 @@
 
 Site de finanças pessoais para acompanhar seus investimentos de forma simples, com fundo branco e detalhes em verde e prata.
 
-**Acesse:** https://lucas-3010.github.io/carteira-verde/
+**Acesse:** https://lucas-3010.github.io/Carteira-Verde/
 
 ## O que o site faz
 
