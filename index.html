@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Carteira Verde: acompanhe quanto sua carteira vale, por tipo e por banco, e simule investimentos.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect width='20' height='20' rx='5' fill='%23e7ebee'/%3E%3Cpath d='M3 15 L7.5 9.5 L11 12 L17 5' fill='none' stroke='%230f7a4d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Carteira Verde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: cabeçalho fixo com abas; conteúdo em grade de cartões brancos com bordas prateadas e detalhes em verde.
+   Tema: fundo branco escolhido pelo usuário (tema único, claro). Para mudar cores, edite só os tokens abaixo. */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f6f8f7;          /* fundo leve de áreas internas */
+  --ink: #15211b;              /* texto principal */
+  --muted: #5f6b66;            /* texto secundário */
+  --silver: #c3cad0;           /* bordas prateadas */
+  --silver-soft: #e7ebee;
+  --silver-grad: linear-gradient(135deg, #f4f6f8 0%, #dfe4e8 45%, #f7f9fa 70%, #cfd6db 100%);
+  --green: #0f7a4d;            /* verde principal */
+  --green-bright: #1aa866;
+  --green-soft: #e3f4ea;
+  --red: #c0392b;
+  --red-soft: #fbe9e7;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+}
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+.num { font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--green-bright); outline-offset: 2px; }
+
+/* ---------- Cabeçalho ---------- */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+header.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); border-bottom: 1px solid var(--silver-soft);
+}
+.top-inner, main {
+  max-width: 1160px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  width: 34px; height: 34px; border-radius: 10px; background: var(--silver-grad);
+  border: 1px solid var(--silver); display: grid; place-items: center;
+}
+.brand h1 { font-size: 20px; }
+.brand h1 span { color: var(--green); }
+nav.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--silver-soft); padding: 4px; border-radius: 999px; overflow-x: auto; max-width: 100%; }
+nav.tabs button {
+  border: 0; background: transparent; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  font-weight: 600; color: var(--muted); white-space: nowrap;
+}
+nav.tabs button[aria-selected="true"] { background: var(--green); color: #fff; }
+nav.tabs button:not([aria-selected="true"]):hover { color: var(--green); }
+
+main { padding-block: 24px 48px; display: grid; gap: 20px; }
+
+/* ---------- Cartões ---------- */
+.card {
+  background: var(--bg); border: 1px solid var(--silver); border-radius: var(--radius);
+  padding: 20px; min-width: 0;
+}
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.card-head h2 { font-size: 19px; }
+.eyebrow { font-size: 13px; font-weight: 600; color: var(--muted); }
+.tag {
+  display: inline-block; font-size: 12px; font-weight: 600;
+  padding: 3px 8px; border-radius: 999px; background: var(--silver-soft); color: var(--muted);
+}
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; }
+
+/* ---------- Herói: valor da carteira ---------- */
+.hero {
+  background: var(--silver-grad); border: 1px solid var(--silver); border-radius: 18px;
+  padding: 24px; display: grid; gap: 18px; position: relative; overflow: hidden;
+}
+.hero::after { /* faixa verde fina, como um friso metálico */
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+  background: linear-gradient(90deg, var(--green), var(--green-bright));
+}
+.hero-value { font-family: var(--font-display); font-size: clamp(34px, 7vw, 52px); font-weight: 700; line-height: 1.05; }
+.hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { background: rgba(255,255,255,0.75); border: 1px solid var(--silver); border-radius: 12px; padding: 12px 14px; }
+.stat b { display: block; font-size: 18px; font-weight: 700; }
+.up { color: var(--green); }
+.down { color: var(--red); }
+.pill { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 13px; padding: 3px 9px; border-radius: 999px; }
+.pill.up { background: var(--green-soft); }
+.pill.down { background: var(--red-soft); }
+
+.notice {
+  display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  background: var(--green-soft); border: 1px solid #bfe3cf; border-radius: 12px; padding: 10px 14px; font-size: 14px;
+}
+
+/* ---------- Gráfico de pizza (rosca) ---------- */
+.donut-wrap { display: grid; grid-template-columns: minmax(160px, 220px) 1fr; gap: 20px; align-items: center; }
+.donut-wrap svg { width: 100%; max-width: 220px; height: auto; display: block; margin: 0 auto; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.legend li { display: grid; grid-template-columns: 12px 1fr auto auto; gap: 10px; align-items: center; font-size: 14px; }
+.legend .sw { width: 12px; height: 12px; border-radius: 3px; }
+.legend .pct { font-weight: 700; min-width: 54px; text-align: right; }
+.legend .val { color: var(--muted); min-width: 92px; text-align: right; }
+@media (max-width: 520px) { .donut-wrap { grid-template-columns: 1fr; } .legend .val { display: none; } .legend li { grid-template-columns: 12px 1fr auto; } }
+
+/* ---------- Listas: altas e notícias ---------- */
+.list { list-style: none; margin: 0; padding: 0; display: grid; }
+.list li { padding: 11px 0; border-top: 1px solid var(--silver-soft); }
+.list li:first-child { border-top: 0; padding-top: 0; }
+.gainer { display: grid; grid-template-columns: 30px 1fr auto auto; gap: 12px; align-items: center; }
+.rank { font-family: var(--font-display); font-weight: 700; color: var(--silver); font-size: 18px; text-align: center; }
+.gainer .tk { font-weight: 700; }
+.gainer .nm { font-size: 13px; color: var(--muted); }
+.spark { width: 64px; height: 22px; }
+.news a { color: inherit; text-decoration: none; display: grid; gap: 3px; }
+.news a:hover h3 { color: var(--green); }
+.news h3 { font-family: var(--font-body); font-size: 15px; font-weight: 600; line-height: 1.35; }
+.news .meta { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.news .cat { color: var(--green); font-weight: 600; }
+
+/* ---------- Formulários ---------- */
+form.fields, .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 14px; }
+label.f { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); }
+label.f input, label.f select {
+  border: 1px solid var(--silver); border-radius: 10px; padding: 9px 11px; background: var(--bg); color: var(--ink);
+  font-weight: 500; font-size: 15px; width: 100%;
+}
+label.f input:focus, label.f select:focus { border-color: var(--green); outline: none; box-shadow: 0 0 0 3px var(--green-soft); }
+.hint { font-size: 12.5px; color: var(--muted); font-weight: 400; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.btn {
+  border: 1px solid var(--green); background: var(--green); color: #fff; font-weight: 700;
+  padding: 10px 18px; border-radius: 10px; cursor: pointer;
+}
+.btn:hover { background: #0c6640; }
+.btn.ghost { background: var(--bg); color: var(--green); }
+.btn.ghost:hover { background: var(--green-soft); }
+.btn.small { padding: 5px 11px; font-size: 13px; border-radius: 8px; }
+.btn.danger { border-color: var(--red); background: var(--bg); color: var(--red); }
+.btn.danger.armed { background: var(--red); color: #fff; }
+.chip { border: 1px solid var(--silver); background: var(--bg); padding: 6px 12px; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 600; }
+.chip:hover, .chip.on { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+
+/* ---------- Tabela de investimentos ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 720px; }
+th { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--silver); }
+td { padding: 11px 10px; border-bottom: 1px solid var(--silver-soft); vertical-align: middle; }
+td.r, th.r { text-align: right; }
+tr:hover td { background: var(--surface); }
+.empty { text-align: center; color: var(--muted); padding: 28px 10px; }
+
+/* ---------- Simulador ---------- */
+.sim-result { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.sim-result .stat { background: var(--surface); }
+.sim-result .stat.main { background: var(--green); color: #fff; border-color: var(--green); }
+.sim-result .stat.main .eyebrow { color: #d4f0e0; }
+.chart { position: relative; }
+.chart svg { width: 100%; height: auto; display: block; }
+.tip { position: absolute; pointer-events: none; background: var(--bg); border: 1px solid var(--silver); border-radius: 10px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 14px rgba(21,33,27,.08); white-space: nowrap; }
+.tip b { display: block; }
+.chart text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
+.chart-legend { display: flex; gap: 16px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.chart-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+/* ---------- Autocompletar ---------- */
+.ac { position: relative; display: block; }
+.ac-list {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none;
+  background: var(--bg); border: 1px solid var(--silver); border-radius: 12px; box-shadow: 0 10px 28px rgba(21,33,27,.12);
+  max-height: 290px; overflow-y: auto; color: var(--ink); font-weight: 500;
+}
+.ac-list li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.ac-list li[aria-selected="true"], .ac-list li:hover { background: var(--green-soft); }
+.ac-list .ac-main { font-weight: 700; }
+.ac-list .ac-sub { color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.ac-list .ac-tag { font-size: 12px; color: var(--green); font-weight: 600; white-space: nowrap; }
+.ac-list mark { background: none; color: var(--green); }
+
+/* ---------- Bancos ---------- */
+.bank-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bank-bar > span { font-weight: 600; color: var(--muted); font-size: 14px; }
+.bank-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.bars { display: grid; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: minmax(90px, 160px) 1fr auto; gap: 12px; align-items: center; width: 100%;
+  background: none; border: 0; padding: 4px 6px; margin: 0 -6px; border-radius: 8px; cursor: pointer; text-align: left; }
+.bar-row:hover, .bar-row.on { background: var(--surface); }
+.bar-row .bn { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 12px; background: var(--silver-soft); border-radius: 0 4px 4px 0; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--green); border-radius: 0 4px 4px 0; }
+.bar-row.dim .bar-fill { background: #9aa5ad; }
+.bar-row .bv { font-size: 14px; text-align: right; min-width: 150px; }
+.bar-row .bv small { color: var(--muted); margin-left: 6px; }
+.bank-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 12px; }
+.bank-card { border: 1px solid var(--silver-soft); border-radius: 12px; padding: 14px; background: var(--bg); cursor: pointer; text-align: center; display: grid; gap: 6px; }
+.bank-card:hover { border-color: var(--silver); }
+.bank-card.on { border-color: var(--green); box-shadow: 0 0 0 2px var(--green-soft); }
+.bank-card svg { width: min(130px, 100%); height: auto; margin: 0 auto; display: block; }
+.bank-card b { font-size: 15px; }
+.bank-card .hint { font-size: 13px; }
+.legend-inline { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.legend-inline span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-inline i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.subhead { font-size: 15px; font-weight: 700; margin: 0; font-family: var(--font-body); }
+@media (max-width: 520px) { .bar-row { grid-template-columns: 1fr auto; } .bar-row .bar-track { grid-column: 1 / -1; grid-row: 2; } .bar-row .bv { min-width: 0; } }
+
+footer { font-size: 12.5px; color: var(--muted); text-align: center; padding-bottom: 24px; }
+@media (prefers-reduced-motion: no-preference) { .panel { animation: fade .25s ease; } @keyframes fade { from { opacity: .4; transform: translateY(4px); } to { opacity: 1; transform: none; } } }
+</style>
+
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)} body{margin:0} img{max-width:100%} [hidden]{display:none!important}</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 15 L7 9 L11 12 L18 4" fill="none" stroke="#0f7a4d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 4 H18 V9" fill="none" stroke="#0f7a4d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1>Carteira <span>Verde</span></h1>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Seções">
+      <button role="tab" id="tab-inicio" data-tab="inicio" aria-selected="true">Início</button>
+      <button role="tab" id="tab-investimentos" data-tab="investimentos" aria-selected="false">Meus investimentos</button>
+      <button role="tab" id="tab-simulador" data-tab="simulador" aria-selected="false">Simulador</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== SELETOR DE BANCO ===================== -->
+  <div class="bank-bar" id="bank-bar" role="group" aria-label="Escolher banco">
+    <span>Ver investimentos de:</span>
+    <div class="bank-chips" id="bank-chips"></div>
+  </div>
+
+  <!-- ===================== INÍCIO ===================== -->
+  <section class="panel" id="panel-inicio" role="tabpanel" aria-labelledby="tab-inicio">
+    <div style="display:grid; gap:20px">
+      <div id="sample-notice" class="notice" hidden>
+        <span>Esta é uma <b>carteira de exemplo</b>. Adicione seus investimentos para ver os seus números.</span>
+        <div class="actions">
+          <button class="btn small" data-goto="investimentos">Adicionar investimento</button>
+          <button class="btn small ghost" id="clear-sample">Começar do zero</button>
+        </div>
+      </div>
+
+      <div class="hero">
+        <div>
+          <div class="eyebrow" id="hero-label">Quanto sua carteira vale hoje</div>
+          <div class="hero-value num" id="total-value">R$ 0,00</div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><span class="eyebrow">Total investido</span><b class="num" id="total-invested">R$ 0,00</b></div>
+          <div class="stat"><span class="eyebrow">Lucro / prejuízo</span><b class="num" id="total-profit">R$ 0,00</b></div>
+          <div class="stat"><span class="eyebrow">Rentabilidade</span><b class="num" id="total-return">0,00%</b></div>
+          <div class="stat"><span class="eyebrow">Ativos</span><b class="num" id="total-count">0</b></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Composição da carteira</h2><span class="eyebrow" id="donut-scope">por tipo, todos os bancos</span></div>
+          <div class="donut-wrap">
+            <svg id="donut" viewBox="0 0 200 200" role="img" aria-label="Gráfico de composição da carteira"></svg>
+            <ul class="legend" id="legend"></ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Ações em alta</h2><span class="tag">dados de exemplo</span></div>
+          <ul class="list" id="gainers"></ul>
+        </div>
+      </div>
+
+      <div class="card" id="bank-section">
+        <div class="card-head"><h2>Investimentos por banco</h2><span class="eyebrow">toque em um banco para ver só ele</span></div>
+        <div style="display:grid; gap:22px">
+          <div style="display:grid; gap:10px">
+            <h3 class="subhead">Gráfico geral: quanto você tem em cada banco</h3>
+            <div class="bars" id="bank-bars"></div>
+          </div>
+          <div style="display:grid; gap:12px">
+            <h3 class="subhead">Gráfico de cada banco, por tipo de investimento</h3>
+            <div class="legend-inline" id="bank-legend"></div>
+            <div class="bank-grid" id="bank-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Notícias de investimentos</h2><span class="tag">dados de exemplo</span></div>
+        <ul class="list news" id="news"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MEUS INVESTIMENTOS ===================== -->
+  <section class="panel" id="panel-investimentos" role="tabpanel" aria-labelledby="tab-investimentos" hidden>
+    <div style="display:grid; gap:20px">
+      <div class="card">
+        <div class="card-head"><h2 id="form-title">Adicionar investimento</h2></div>
+        <form id="inv-form" class="fields" autocomplete="off">
+          <label class="f">Código / ticker (opcional)
+            <span class="ac"><input id="f-ticker" placeholder="Comece a digitar, ex.: PETR"></span>
+          </label>
+          <label class="f">Nome
+            <span class="ac"><input id="f-nome" required placeholder="Ex.: Petrobras, Tesouro Selic, CDB"></span>
+          </label>
+          <label class="f">Tipo
+            <span class="ac"><input id="f-tipo" required placeholder="Ex.: Ações"></span>
+          </label>
+          <label class="f">Banco / corretora
+            <span class="ac"><input id="f-banco" required placeholder="Ex.: Nubank"></span>
+          </label>
+          <label class="f">Quantidade
+            <span class="ac"><input id="f-qtd" type="number" min="0" step="any" required placeholder="Ex.: 100"></span>
+          </label>
+          <label class="f">Preço médio de compra (R$)
+            <span class="ac"><input id="f-pm" type="number" min="0" step="0.01" required placeholder="Ex.: 32,50"></span>
+          </label>
+          <label class="f">Preço atual (R$)
+            <span class="ac"><input id="f-pa" type="number" min="0" step="0.01" required placeholder="Ex.: 35,10"></span>
+          </label>
+        </form>
+        <p class="hint" style="margin:12px 0 16px">Para renda fixa ou Tesouro, use quantidade 1 e informe o valor aplicado e o valor atual.</p>
+        <div class="actions">
+          <button class="btn" type="submit" form="inv-form" id="save-btn">Adicionar</button>
+          <button class="btn ghost" type="button" id="cancel-edit" hidden>Cancelar edição</button>
+          <span id="form-msg" class="hint" role="status"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Seus investimentos</h2><span class="hint" id="inv-count"></span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Ativo</th><th>Banco</th><th>Tipo</th><th class="r">Qtd.</th><th class="r">Preço médio</th>
+              <th class="r">Preço atual</th><th class="r">Valor atual</th><th class="r">Resultado</th><th class="r">Ações</th>
+            </tr></thead>
+            <tbody id="inv-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SIMULADOR ===================== -->
+  <section class="panel" id="panel-simulador" role="tabpanel" aria-labelledby="tab-simulador" hidden>
+    <div style="display:grid; gap:20px">
+      <div class="card">
+        <div class="card-head"><h2>Simulador de investimentos</h2><span class="eyebrow">juros compostos</span></div>
+        <div class="fields">
+          <label class="f">Valor inicial (R$)<span class="ac"><input id="s-inicial" type="number" min="0" step="100" value="5000"></span></label>
+          <label class="f">Aporte mensal (R$)<span class="ac"><input id="s-mensal" type="number" min="0" step="50" value="500"></span></label>
+          <label class="f">Prazo (anos)<span class="ac"><input id="s-anos" type="number" min="1" max="50" step="1" value="10"></span></label>
+          <label class="f">Rentabilidade ao ano (%)<span class="ac"><input id="s-taxa" type="number" min="0" step="0.1" value="12"></span></label>
+        </div>
+        <div style="margin-top:14px; display:grid; gap:8px">
+          <span class="hint">Taxas de referência (estimativas, edite à vontade):</span>
+          <div class="actions" id="presets"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sim-result">
+          <div class="stat main"><span class="eyebrow">Valor final</span><b class="num" id="r-final">R$ 0,00</b></div>
+          <div class="stat"><span class="eyebrow">Total aportado</span><b class="num" id="r-aportado">R$ 0,00</b></div>
+          <div class="stat"><span class="eyebrow">Rendimento (juros)</span><b class="num up" id="r-juros">R$ 0,00</b></div>
+        </div>
+        <div class="chart" style="margin-top:20px">
+          <div class="chart-legend"><span><i style="background:var(--green)"></i>Valor acumulado</span><span><i style="background:var(--silver)"></i>Dinheiro aportado</span></div>
+          <svg id="sim-chart" viewBox="0 0 960 320" role="img" aria-label="Evolução do investimento simulado"></svg>
+          <div class="tip num" id="sim-tip" hidden></div>
+        </div>
+        <p class="hint" style="margin:10px 0 0">Simulação sem impostos e taxas. Rentabilidade passada não garante rentabilidade futura.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>Seus investimentos ficam salvos só neste navegador. Notícias e altas são dados de exemplo.</footer>
+</main>
+
+<script>
+/* =====================================================================
+   1. CONFIGURAÇÃO E DADOS DE EXEMPLO
+   Para manutenção: mude aqui os tipos, cores, taxas e dados de exemplo.
+   ===================================================================== */
+const TIPOS = [
+  { id: "acoes",      nome: "Ações",          cor: "#0f7a4d" },  // cores validadas para daltonismo
+  { id: "fiis",       nome: "Fundos imobiliários", cor: "#2a6fb0" },
+  { id: "rendafixa",  nome: "Renda fixa",     cor: "#b07a12" },
+  { id: "tesouro",    nome: "Tesouro Direto", cor: "#8257b3" },
+  { id: "exterior",   nome: "Exterior",       cor: "#b8483a" },
+  { id: "cripto",     nome: "Cripto",         cor: "#0a8fa3" },
+];
+
+const TAXAS_REFERENCIA = [
+  { nome: "Poupança",        taxa: 6.2 },
+  { nome: "100% do CDI",     taxa: 14.9 },
+  { nome: "CDB 110% CDI",    taxa: 16.4 },
+  { nome: "Ações (longo prazo)", taxa: 12 },
+];
+
+// Sugestões que aparecem no campo "Banco / corretora". O usuário também pode digitar outro nome.
+const BANCOS = [
+  "Nubank", "Itaú", "Bradesco", "Banco do Brasil", "Caixa", "Santander", "Inter", "C6 Bank",
+  "BTG Pactual", "XP Investimentos", "Rico", "Clear", "Mercado Pago", "PicPay", "Sicredi", "Sicoob",
+];
+const SEM_BANCO = "Sem banco informado";
+
+// Ativos conhecidos para o autocompletar. Para incluir um ativo, adicione uma linha: [código, nome, tipo].
+const ATIVOS = [
+  // Ações
+  ["PETR4", "Petrobras PN", "acoes"], ["PETR3", "Petrobras ON", "acoes"], ["VALE3", "Vale", "acoes"],
+  ["ITUB4", "Itaú Unibanco", "acoes"], ["ITSA4", "Itaúsa", "acoes"], ["BBDC4", "Bradesco PN", "acoes"],
+  ["BBDC3", "Bradesco ON", "acoes"], ["BBAS3", "Banco do Brasil", "acoes"], ["SANB11", "Santander Brasil", "acoes"],
+  ["BPAC11", "BTG Pactual", "acoes"], ["B3SA3", "B3", "acoes"], ["BBSE3", "BB Seguridade", "acoes"],
+  ["CXSE3", "Caixa Seguridade", "acoes"], ["PSSA3", "Porto Seguro", "acoes"], ["ABEV3", "Ambev", "acoes"],
+  ["WEGE3", "WEG", "acoes"], ["EMBR3", "Embraer", "acoes"], ["ELET3", "Eletrobras", "acoes"],
+  ["EGIE3", "Engie Brasil", "acoes"], ["EQTL3", "Equatorial", "acoes"], ["CMIG4", "Cemig", "acoes"],
+  ["TAEE11", "Taesa", "acoes"], ["SBSP3", "Sabesp", "acoes"], ["ENEV3", "Eneva", "acoes"],
+  ["PRIO3", "PRIO", "acoes"], ["UGPA3", "Ultrapar", "acoes"], ["VBBR3", "Vibra Energia", "acoes"],
+  ["CSAN3", "Cosan", "acoes"], ["RAIL3", "Rumo", "acoes"], ["SUZB3", "Suzano", "acoes"],
+  ["KLBN11", "Klabin", "acoes"], ["GGBR4", "Gerdau", "acoes"], ["GOAU4", "Metalúrgica Gerdau", "acoes"],
+  ["CSNA3", "CSN", "acoes"], ["CMIN3", "CSN Mineração", "acoes"], ["USIM5", "Usiminas", "acoes"],
+  ["BRAP4", "Bradespar", "acoes"], ["RENT3", "Localiza", "acoes"], ["LREN3", "Lojas Renner", "acoes"],
+  ["MGLU3", "Magazine Luiza", "acoes"], ["ASAI3", "Assaí", "acoes"], ["RADL3", "Raia Drogasil", "acoes"],
+  ["RDOR3", "Rede D'Or", "acoes"], ["HAPV3", "Hapvida", "acoes"], ["VIVT3", "Vivo (Telefônica Brasil)", "acoes"],
+  ["TIMS3", "TIM", "acoes"], ["TOTS3", "Totvs", "acoes"], ["INTB3", "Intelbras", "acoes"],
+  ["CYRE3", "Cyrela", "acoes"], ["MRVE3", "MRV", "acoes"], ["MULT3", "Multiplan", "acoes"],
+  ["ALOS3", "Allos", "acoes"], ["SLCE3", "SLC Agrícola", "acoes"], ["SMTO3", "São Martinho", "acoes"],
+  ["COGN3", "Cogna", "acoes"], ["YDUQ3", "Yduqs", "acoes"], ["CVCB3", "CVC Brasil", "acoes"],
+  ["IRBR3", "IRB Re", "acoes"],
+  // ETFs
+  ["BOVA11", "ETF Ibovespa (iShares)", "acoes"], ["SMAL11", "ETF Small Caps (iShares)", "acoes"],
+  ["DIVO11", "ETF Dividendos (It Now)", "acoes"], ["IVVB11", "ETF S&P 500 (iShares)", "exterior"],
+  ["NASD11", "ETF Nasdaq 100 (Trend)", "exterior"], ["HASH11", "ETF Cripto (Hashdex)", "cripto"],
+  // Fundos imobiliários
+  ["MXRF11", "Maxi Renda", "fiis"], ["HGLG11", "CSHG Logística", "fiis"], ["KNRI11", "Kinea Renda Imobiliária", "fiis"],
+  ["KNCR11", "Kinea Rendimentos Imobiliários", "fiis"], ["KNIP11", "Kinea Índices de Preços", "fiis"],
+  ["XPML11", "XP Malls", "fiis"], ["XPLG11", "XP Log", "fiis"], ["VISC11", "Vinci Shopping Centers", "fiis"],
+  ["BTLG11", "BTG Pactual Logística", "fiis"], ["CPTS11", "Capitânia Securities", "fiis"],
+  ["RECR11", "REC Recebíveis", "fiis"], ["IRDM11", "Iridium Recebíveis", "fiis"], ["HGRU11", "CSHG Renda Urbana", "fiis"],
+  ["VGHF11", "Valora Hedge Fund", "fiis"], ["TGAR11", "TG Ativo Real", "fiis"], ["HSML11", "HSI Malls", "fiis"],
+  ["MCCI11", "Mauá Capital Recebíveis", "fiis"], ["PVBI11", "VBI Prime Properties", "fiis"],
+  // Tesouro Direto
+  ["", "Tesouro Selic 2029", "tesouro"], ["", "Tesouro Selic 2031", "tesouro"],
+  ["", "Tesouro Prefixado 2029", "tesouro"], ["", "Tesouro Prefixado 2032", "tesouro"],
+  ["", "Tesouro IPCA+ 2029", "tesouro"], ["", "Tesouro IPCA+ 2035", "tesouro"], ["", "Tesouro IPCA+ 2045", "tesouro"],
+  ["", "Tesouro IPCA+ com Juros Semestrais 2035", "tesouro"], ["", "Tesouro RendA+ 2065", "tesouro"],
+  ["", "Tesouro Educa+ 2040", "tesouro"],
+  // Renda fixa
+  ["", "CDB", "rendafixa"], ["", "CDB liquidez diária", "rendafixa"], ["", "LCI", "rendafixa"], ["", "LCA", "rendafixa"],
+  ["", "CRI", "rendafixa"], ["", "CRA", "rendafixa"], ["", "Debênture", "rendafixa"], ["", "Poupança", "rendafixa"],
+  ["", "Fundo DI", "rendafixa"], ["", "Caixinha / cofrinho do banco", "rendafixa"],
+  // Cripto
+  ["BTC", "Bitcoin", "cripto"], ["ETH", "Ethereum", "cripto"], ["SOL", "Solana", "cripto"],
+  ["USDT", "Tether (dólar digital)", "cripto"], ["XRP", "XRP", "cripto"],
+].map(([ticker, nome, tipo]) => ({ ticker, nome, tipo }));
+const TODOS = "__todos__";
+
+// Carteira mostrada até o usuário adicionar a própria (marcada como exemplo na tela).
+const CARTEIRA_EXEMPLO = [
+  { nome: "Itaú Unibanco", ticker: "ITUB4", tipo: "acoes", banco: "XP Investimentos", quantidade: 200, precoMedio: 31.2, precoAtual: 36.85 },
+  { nome: "WEG",           ticker: "WEGE3", tipo: "acoes", banco: "XP Investimentos", quantidade: 80,  precoMedio: 41.5, precoAtual: 39.9 },
+  { nome: "Maxi Renda",    ticker: "MXRF11", tipo: "fiis", banco: "Nubank", quantidade: 600, precoMedio: 9.8, precoAtual: 10.12 },
+  { nome: "CDB Nubank 110% CDI", ticker: "", tipo: "rendafixa", banco: "Nubank", quantidade: 1, precoMedio: 10000, precoAtual: 11240 },
+  { nome: "Tesouro IPCA+ 2035", ticker: "", tipo: "tesouro", banco: "Banco do Brasil", quantidade: 1, precoMedio: 8000, precoAtual: 8710 },
+  { nome: "ETF S&P 500",   ticker: "IVVB11", tipo: "exterior", banco: "XP Investimentos", quantidade: 15, precoMedio: 290, precoAtual: 352.4 },
+];
+
+// Exemplo ilustrativo. Para dados reais, troque por uma API (veja "fonteDeDados" abaixo).
+const ALTAS_EXEMPLO = [
+  { ticker: "AZUL4", nome: "Azul",              variacao: 8.42, preco: 4.25 },
+  { ticker: "CVCB3", nome: "CVC Brasil",        variacao: 6.91, preco: 2.94 },
+  { ticker: "MGLU3", nome: "Magazine Luiza",    variacao: 5.37, preco: 9.81 },
+  { ticker: "PETZ3", nome: "Petz",              variacao: 4.80, preco: 4.15 },
+  { ticker: "VALE3", nome: "Vale",              variacao: 3.12, preco: 58.70 },
+];
+
+const NOTICIAS_EXEMPLO = [
+  { titulo: "Copom mantém a taxa Selic e sinaliza cautela para os próximos meses", fonte: "Exemplo", categoria: "Juros", horas: 1 },
+  { titulo: "Ibovespa fecha em alta puxado por bancos e mineradoras", fonte: "Exemplo", categoria: "Bolsa", horas: 3 },
+  { titulo: "Dólar recua frente ao real com entrada de capital estrangeiro", fonte: "Exemplo", categoria: "Câmbio", horas: 5 },
+  { titulo: "Fundos imobiliários de papel seguem entre os mais buscados por quem quer renda mensal", fonte: "Exemplo", categoria: "FIIs", horas: 8 },
+  { titulo: "Inflação desacelera no mês e reforça leitura de juros estáveis", fonte: "Exemplo", categoria: "Economia", horas: 12 },
+];
+
+/* =====================================================================
+   2. ARMAZENAMENTO (localStorage, protegido por try/catch)
+   ===================================================================== */
+const CHAVE = "carteira-verde:investimentos";
+const Armazem = {
+  carregar() {
+    try { const t = localStorage.getItem(CHAVE); return t ? JSON.parse(t) : null; } catch { return null; }
+  },
+  salvar(lista) {
+    try { localStorage.setItem(CHAVE, JSON.stringify(lista)); } catch { /* sem armazenamento: segue só na memória */ }
+  },
+};
+
+const novoId = () => Math.random().toString(36).slice(2, 10);
+
+const estado = {
+  // null no armazenamento = usuário nunca salvou nada, então mostramos o exemplo.
+  investimentos: Armazem.carregar() ?? CARTEIRA_EXEMPLO.map(i => ({ ...i, id: novoId() })),
+  ehExemplo: Armazem.carregar() === null,
+  editandoId: null,
+  banco: TODOS,   // banco escolhido no seletor
+};
+
+function salvarCarteira() {
+  estado.ehExemplo = false;
+  Armazem.salvar(estado.investimentos);
+}
+
+/* =====================================================================
+   3. FORMATAÇÃO E CÁLCULOS
+   ===================================================================== */
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const pct = v => (v >= 0 ? "+" : "") + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
+const pctSemSinal = v => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+const nomeTipo = id => (TIPOS.find(t => t.id === id) || { nome: id }).nome;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const bancoDe = i => (i.banco && i.banco.trim()) || SEM_BANCO;
+const bancosDaCarteira = () => [...new Set(estado.investimentos.map(bancoDe))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+// Investimentos do banco escolhido (ou todos).
+const visiveis = () => estado.banco === TODOS ? estado.investimentos : estado.investimentos.filter(i => bancoDe(i) === estado.banco);
+
+const valorAtual = i => i.quantidade * i.precoAtual;
+const valorInvestido = i => i.quantidade * i.precoMedio;
+
+function resumo(lista) {
+  const total = lista.reduce((s, i) => s + valorAtual(i), 0);
+  const investido = lista.reduce((s, i) => s + valorInvestido(i), 0);
+  const lucro = total - investido;
+  return { total, investido, lucro, rent: investido > 0 ? (lucro / investido) * 100 : 0 };
+}
+
+function porTipo(lista) {
+  const total = lista.reduce((s, i) => s + valorAtual(i), 0);
+  return TIPOS
+    .map(t => {
+      const v = lista.filter(i => i.tipo === t.id).reduce((s, i) => s + valorAtual(i), 0);
+      return { ...t, valor: v, pct: total > 0 ? (v / total) * 100 : 0 };
+    })
+    .filter(t => t.valor > 0)
+    .sort((a, b) => b.valor - a.valor);
+}
+
+// Juros compostos com aportes mensais. Retorna o saldo ano a ano.
+function simular({ inicial, mensal, anos, taxaAno }) {
+  const taxaMes = Math.pow(1 + taxaAno / 100, 1 / 12) - 1;
+  let saldo = inicial, aportado = inicial;
+  const pontos = [{ ano: 0, saldo, aportado }];
+  for (let m = 1; m <= anos * 12; m++) {
+    saldo = saldo * (1 + taxaMes) + mensal;
+    aportado += mensal;
+    if (m % 12 === 0) pontos.push({ ano: m / 12, saldo, aportado });
+  }
+  return pontos;
+}
+
+/* =====================================================================
+   4. TELAS
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+
+function renderResumo() {
+  const r = resumo(visiveis());
+  $("hero-label").textContent = estado.banco === TODOS ? "Quanto sua carteira vale hoje" : `Quanto você tem em ${estado.banco}`;
+  $("total-value").textContent = brl.format(r.total);
+  $("total-invested").textContent = brl.format(r.investido);
+  $("total-profit").textContent = (r.lucro >= 0 ? "+" : "") + brl.format(r.lucro);
+  $("total-profit").className = "num " + (r.lucro >= 0 ? "up" : "down");
+  $("total-return").textContent = pct(r.rent);
+  $("total-return").className = "num " + (r.rent >= 0 ? "up" : "down");
+  $("total-count").textContent = visiveis().length;
+  $("sample-notice").hidden = !estado.ehExemplo;
+}
+
+// Desenha uma rosca (SVG 200x200) com as fatias por tipo. Usada no gráfico principal e no de cada banco.
+function roscaSVG(lista, comTotal = true) {
+  const fatias = porTipo(lista);
+  const R = 80, C = 2 * Math.PI * R;
+  let html = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="#e7ebee" stroke-width="28"/>`;
+  let acumulado = 0;
+  fatias.forEach(f => {
+    const tam = (f.pct / 100) * C;
+    const gap = fatias.length > 1 ? 2 : 0;
+    html += `<circle cx="100" cy="100" r="${R}" fill="none" stroke="${f.cor}" stroke-width="28"
+      stroke-dasharray="${Math.max(tam - gap, 0)} ${C}" stroke-dashoffset="${-acumulado}" transform="rotate(-90 100 100)"><title>${esc(f.nome)}: ${pctSemSinal(f.pct)}</title></circle>`;
+    acumulado += tam;
+  });
+  const total = resumo(lista).total;
+  if (comTotal) html += `<text x="100" y="94" text-anchor="middle" font-size="11" fill="#5f6b66" font-family="Figtree, sans-serif">Total</text>
+           <text x="100" y="114" text-anchor="middle" font-size="15" font-weight="700" fill="#15211b" font-family="Figtree, sans-serif">${esc(abreviar(total))}</text>`;
+  return html;
+}
+
+function renderRosca() {
+  const lista = visiveis();
+  const fatias = porTipo(lista);
+  $("donut").innerHTML = roscaSVG(lista);
+  $("donut-scope").textContent = estado.banco === TODOS ? "por tipo, todos os bancos" : `por tipo, ${estado.banco}`;
+  $("legend").innerHTML = fatias.length
+    ? fatias.map(f => `<li><span class="sw" style="background:${f.cor}"></span><span>${esc(f.nome)}</span>
+        <span class="pct num">${pctSemSinal(f.pct)}</span><span class="val num">${brl.format(f.valor)}</span></li>`).join("")
+    : `<li class="hint" style="display:block">Adicione investimentos para ver a composição.</li>`;
+}
+
+function abreviar(v) {
+  if (v >= 1e6) return "R$ " + (v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " mi";
+  if (v >= 1e3) return "R$ " + (v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mil";
+  return brl.format(v);
+}
+
+// Mini gráfico ilustrativo em subida para cada ação em alta.
+function sparkline(seed, alta) {
+  const pts = [];
+  let y = 16;
+  for (let i = 0; i < 8; i++) {
+    y += Math.sin(seed * (i + 1)) * 3 - (alta ? 1.4 : -1.4);
+    y = Math.min(20, Math.max(2, y));
+    pts.push(`${i * 9},${y.toFixed(1)}`);
+  }
+  return `<svg class="spark" viewBox="0 0 64 22" aria-hidden="true"><polyline points="${pts.join(" ")}" fill="none" stroke="#1aa866" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function renderAltas(lista) {
+  $("gainers").innerHTML = lista.map((a, i) => `
+    <li class="gainer">
+      <span class="rank">${i + 1}</span>
+      <div><div class="tk">${esc(a.ticker)}</div><div class="nm">${esc(a.nome)} · ${brl.format(a.preco)}</div></div>
+      ${sparkline(a.ticker.length + i * 1.7, true)}
+      <span class="pill up num">▲ ${pct(a.variacao)}</span>
+    </li>`).join("");
+}
+
+function renderNoticias(lista) {
+  $("news").innerHTML = lista.map(n => `
+    <li><a href="${esc(n.url || "#")}" ${n.url ? 'target="_blank" rel="noopener"' : 'onclick="return false"'}>
+      <h3>${esc(n.titulo)}</h3>
+      <div class="meta"><span class="cat">${esc(n.categoria)}</span><span>${esc(n.fonte)}</span><span>há ${n.horas} h</span></div>
+    </a></li>`).join("");
+}
+
+function renderSeletorBancos() {
+  const bancos = bancosDaCarteira();
+  if (estado.banco !== TODOS && !bancos.includes(estado.banco)) estado.banco = TODOS;
+  const opcoes = [{ id: TODOS, nome: "Todos os bancos" }, ...bancos.map(b => ({ id: b, nome: b }))];
+  $("bank-chips").innerHTML = opcoes.map(o =>
+    `<button class="chip ${o.id === estado.banco ? "on" : ""}" data-banco="${esc(o.id)}" aria-pressed="${o.id === estado.banco}">${esc(o.nome)}</button>`).join("");
+}
+
+function renderBancos() {
+  const bancos = bancosDaCarteira();
+  const totalGeral = resumo(estado.investimentos).total;
+  $("bank-section").hidden = bancos.length === 0;
+  const linhas = bancos
+    .map(b => ({ nome: b, lista: estado.investimentos.filter(i => bancoDe(i) === b) }))
+    .map(b => ({ ...b, valor: resumo(b.lista).total }))
+    .sort((a, b) => b.valor - a.valor);
+  const maior = Math.max(...linhas.map(l => l.valor), 1);
+  const escolhido = estado.banco;
+
+  // Gráfico geral: uma barra por banco.
+  $("bank-bars").innerHTML = linhas.map(l => {
+    const p = totalGeral > 0 ? (l.valor / totalGeral) * 100 : 0;
+    const cls = escolhido === l.nome ? "on" : escolhido !== TODOS ? "dim" : "";
+    return `<button class="bar-row ${cls}" data-banco="${esc(l.nome)}" title="${esc(l.nome)}: ${brl.format(l.valor)}">
+      <span class="bn">${esc(l.nome)}</span>
+      <span class="bar-track"><span class="bar-fill" style="display:block; width:${(l.valor / maior) * 100}%"></span></span>
+      <span class="bv num"><b>${brl.format(l.valor)}</b><small>${pctSemSinal(p)}</small></span>
+    </button>`;
+  }).join("");
+
+  // Um gráfico de rosca para cada banco.
+  $("bank-grid").innerHTML = linhas.map(l => `
+    <button class="bank-card ${escolhido === l.nome ? "on" : ""}" data-banco="${esc(l.nome)}">
+      <svg viewBox="0 0 200 200" role="img" aria-label="Composição em ${esc(l.nome)}">${roscaSVG(l.lista, false)}</svg>
+      <b>${esc(l.nome)}</b>
+      <span class="num">${brl.format(l.valor)}</span>
+      <span class="hint">${l.lista.length} ativo${l.lista.length > 1 ? "s" : ""}</span>
+    </button>`).join("");
+
+  const tiposUsados = new Set(estado.investimentos.map(i => i.tipo));
+  $("bank-legend").innerHTML = TIPOS.filter(t => tiposUsados.has(t.id))
+    .map(t => `<span><i style="background:${t.cor}"></i>${esc(t.nome)}</span>`).join("");
+}
+
+function escolherBanco(banco) {
+  estado.banco = banco;
+  renderTudo();
+}
+
+function renderTabela() {
+  const corpo = $("inv-body");
+  const lista = visiveis();
+  $("inv-count").textContent = lista.length ? `${lista.length} ativo${lista.length > 1 ? "s" : ""}` : "";
+  if (!lista.length) {
+    corpo.innerHTML = `<tr><td colspan="9" class="empty">${estado.investimentos.length ? "Nenhum investimento neste banco." : "Nenhum investimento ainda. Use o formulário acima para adicionar o primeiro."}</td></tr>`;
+    return;
+  }
+  corpo.innerHTML = lista.map(i => {
+    const res = valorAtual(i) - valorInvestido(i);
+    const rp = valorInvestido(i) > 0 ? (res / valorInvestido(i)) * 100 : 0;
+    return `<tr>
+      <td><b>${esc(i.ticker || i.nome)}</b>${i.ticker ? `<div class="hint">${esc(i.nome)}</div>` : ""}</td>
+      <td>${esc(bancoDe(i))}</td>
+      <td>${esc(nomeTipo(i.tipo))}</td>
+      <td class="r num">${i.quantidade.toLocaleString("pt-BR")}</td>
+      <td class="r num">${brl.format(i.precoMedio)}</td>
+      <td class="r num">${brl.format(i.precoAtual)}</td>
+      <td class="r num"><b>${brl.format(valorAtual(i))}</b></td>
+      <td class="r num"><span class="pill ${res >= 0 ? "up" : "down"}">${pct(rp)}</span></td>
+      <td class="r"><div class="actions" style="justify-content:flex-end; flex-wrap:nowrap">
+        <button class="btn small ghost" data-edit="${i.id}">Editar</button>
+        <button class="btn small danger" data-del="${i.id}">Remover</button>
+      </div></td>
+    </tr>`;
+  }).join("");
+}
+
+function renderSimulador() {
+  const p = {
+    inicial: Math.max(0, +$("s-inicial").value || 0),
+    mensal: Math.max(0, +$("s-mensal").value || 0),
+    anos: Math.min(50, Math.max(1, Math.round(+$("s-anos").value || 1))),
+    taxaAno: Math.max(0, +$("s-taxa").value || 0),
+  };
+  const pontos = simular(p);
+  const fim = pontos[pontos.length - 1];
+  $("r-final").textContent = brl.format(fim.saldo);
+  $("r-aportado").textContent = brl.format(fim.aportado);
+  $("r-juros").textContent = brl.format(fim.saldo - fim.aportado);
+  document.querySelectorAll("#presets .chip").forEach(c => c.classList.toggle("on", +c.dataset.taxa === p.taxaAno));
+  desenharGrafico(pontos);
+}
+
+function desenharGrafico(pontos) {
+  const W = 960, H = 320, m = { l: 72, r: 16, t: 14, b: 30 };
+  const maxY = niceMax(Math.max(...pontos.map(p => p.saldo)));
+  const maxX = pontos[pontos.length - 1].ano;
+  const x = a => m.l + (a / maxX) * (W - m.l - m.r);
+  const y = v => H - m.b - (v / maxY) * (H - m.t - m.b);
+  const linha = key => pontos.map(p => `${x(p.ano).toFixed(1)},${y(p[key]).toFixed(1)}`).join(" ");
+  const area = key => `${x(0)},${y(0)} ${linha(key)} ${x(maxX)},${y(0)}`;
+
+  let g = "";
+  for (let i = 0; i <= 4; i++) {
+    const v = (maxY / 4) * i;
+    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="#e7ebee"/>
+          <text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${esc(abreviar(v))}</text>`;
+  }
+  const passo = Math.max(1, Math.ceil(maxX / 10));
+  for (let a = 0; a <= maxX; a += passo) g += `<text x="${x(a)}" y="${H - 10}" text-anchor="middle">${a === 0 ? "hoje" : a + "a"}</text>`;
+
+  const ult = pontos[pontos.length - 1];
+  g += `<polygon points="${area("saldo")}" fill="#1aa866" fill-opacity="0.16"/>
+        <polygon points="${area("aportado")}" fill="#c3cad0" fill-opacity="0.45"/>
+        <polyline points="${linha("aportado")}" fill="none" stroke="#9aa5ad" stroke-width="2"/>
+        <polyline points="${linha("saldo")}" fill="none" stroke="#0f7a4d" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle cx="${x(ult.ano)}" cy="${y(ult.saldo)}" r="4.5" fill="#0f7a4d" stroke="#fff" stroke-width="2"/>`;
+  g += `<line id="sim-cross" x1="0" x2="0" y1="${m.t}" y2="${H - m.b}" stroke="#9aa5ad" stroke-dasharray="3 3" visibility="hidden"/>
+        <rect x="${m.l}" y="0" width="${W - m.l - m.r}" height="${H}" fill="transparent" id="sim-hit"/>`;
+  const svg = $("sim-chart");
+  svg.innerHTML = g;
+
+  // Passar o mouse/dedo mostra os valores do ano mais próximo.
+  const tip = $("sim-tip"), cross = $("sim-cross");
+  const mover = ev => {
+    const box = svg.getBoundingClientRect();
+    const px = ((ev.clientX - box.left) / box.width) * W;
+    const ano = Math.round(((px - m.l) / (W - m.l - m.r)) * maxX);
+    const p = pontos[Math.min(pontos.length - 1, Math.max(0, ano))];
+    cross.setAttribute("x1", x(p.ano)); cross.setAttribute("x2", x(p.ano)); cross.setAttribute("visibility", "visible");
+    tip.innerHTML = `<b>${p.ano === 0 ? "Hoje" : "Ano " + p.ano}</b>Acumulado: ${brl.format(p.saldo)}<br>Aportado: ${brl.format(p.aportado)}`;
+    tip.hidden = false;
+    const left = (x(p.ano) / W) * box.width;
+    tip.style.left = Math.min(Math.max(left - tip.offsetWidth / 2, 0), box.width - tip.offsetWidth) + "px";
+    tip.style.top = "30px";
+  };
+  $("sim-hit").addEventListener("pointermove", mover);
+  $("sim-hit").addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
+}
+
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+}
+
+function renderTudo() {
+  renderSeletorBancos();
+  renderResumo();
+  renderRosca();
+  renderBancos();
+  renderTabela();
+}
+
+/* =====================================================================
+   4b. AUTOCOMPLETAR
+   autocompletar(campo, sugerir, aoEscolher):
+   - sugerir(texto) devolve uma lista de { valor, principal, detalhe?, etiqueta? }
+   - aoEscolher(item) roda quando o usuário escolhe uma sugestão
+   Funciona com mouse, toque e teclado (setas, Enter, Esc).
+   ===================================================================== */
+const normalizar = t => String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+// Destaca em verde o trecho que bate com o que foi digitado.
+function destacar(texto, busca) {
+  const n = normalizar(texto), b = normalizar(busca);
+  const i = b ? n.indexOf(b) : -1;
+  if (i < 0) return esc(texto);
+  return esc(texto.slice(0, i)) + "<mark>" + esc(texto.slice(i, i + b.length)) + "</mark>" + esc(texto.slice(i + b.length));
+}
+
+// Ordena: começa com o texto > alguma palavra começa com o texto > contém o texto.
+function filtrarPor(lista, busca, campos, limite = 8) {
+  const b = normalizar(busca);
+  if (!b) return lista.slice(0, limite);
+  return lista
+    .map(item => {
+      let melhor = 0;
+      for (const c of campos) {
+        const v = normalizar(item[c] || "");
+        if (!v) continue;
+        if (v.startsWith(b)) melhor = Math.max(melhor, 3);
+        else if (v.split(/[\s()/-]+/).some(p => p.startsWith(b))) melhor = Math.max(melhor, 2);
+        else if (v.includes(b)) melhor = Math.max(melhor, 1);
+      }
+      return { item, melhor };
+    })
+    .filter(x => x.melhor > 0)
+    .sort((a, b2) => b2.melhor - a.melhor)
+    .slice(0, limite)
+    .map(x => x.item);
+}
+
+function autocompletar(campo, sugerir, aoEscolher = () => {}) {
+  const lista = document.createElement("ul");
+  lista.className = "ac-list";
+  lista.id = campo.id + "-sugestoes";
+  lista.setAttribute("role", "listbox");
+  lista.hidden = true;
+  campo.after(lista);
+  campo.setAttribute("role", "combobox");
+  campo.setAttribute("aria-autocomplete", "list");
+  campo.setAttribute("aria-controls", lista.id);
+  campo.setAttribute("aria-expanded", "false");
+  campo.setAttribute("autocomplete", "off");
+
+  let itens = [], ativo = -1;
+
+  const fechar = () => { lista.hidden = true; campo.setAttribute("aria-expanded", "false"); ativo = -1; };
+  const marcar = i => {
+    ativo = i;
+    [...lista.children].forEach((li, j) => li.setAttribute("aria-selected", j === i));
+    if (lista.children[i]) lista.children[i].scrollIntoView({ block: "nearest" });
+  };
+  const abrir = () => {
+    itens = sugerir(campo.value);
+    if (!itens.length) return fechar();
+    lista.innerHTML = itens.map((it, i) => `<li role="option" id="${lista.id}-${i}" data-i="${i}">
+      <span class="ac-main">${destacar(it.principal, campo.value)}</span>
+      <span class="ac-sub">${it.detalhe ? destacar(it.detalhe, campo.value) : ""}</span>
+      <span class="ac-tag">${esc(it.etiqueta || "")}</span></li>`).join("");
+    lista.hidden = false;
+    campo.setAttribute("aria-expanded", "true");
+    marcar(-1);
+  };
+  const escolher = i => {
+    const it = itens[i];
+    if (!it) return;
+    campo.value = it.valor;
+    fechar();
+    aoEscolher(it);
+    campo.dispatchEvent(new Event("input", { bubbles: true }));
+    fechar();
+  };
+
+  campo.addEventListener("input", e => { if (e.isTrusted) abrir(); });
+  campo.addEventListener("focus", abrir);
+  campo.addEventListener("blur", () => setTimeout(fechar, 120));
+  campo.addEventListener("keydown", e => {
+    if (lista.hidden && e.key === "ArrowDown") { abrir(); return; }
+    if (lista.hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); marcar((ativo + 1) % itens.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); marcar((ativo - 1 + itens.length) % itens.length); }
+    else if (e.key === "Enter" && ativo >= 0) { e.preventDefault(); escolher(ativo); }
+    else if (e.key === "Escape") fechar();
+  });
+  // mousedown em vez de click, para escolher antes do campo perder o foco.
+  lista.addEventListener("mousedown", e => {
+    const li = e.target.closest("li");
+    if (li) { e.preventDefault(); escolher(+li.dataset.i); }
+  });
+}
+
+/* =====================================================================
+   5. FONTE DE DADOS DE MERCADO
+   Hoje usa dados de exemplo. Para dados reais, troque o corpo destas funções
+   por chamadas a uma API (ex.: brapi.dev para ações da B3, NewsAPI para notícias).
+   ===================================================================== */
+const fonteDeDados = {
+  async maioresAltas() { return ALTAS_EXEMPLO; },
+  async noticias() { return NOTICIAS_EXEMPLO; },
+};
+
+/* =====================================================================
+   6. EVENTOS
+   ===================================================================== */
+function mudarAba(aba) {
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === aba));
+  document.querySelectorAll(".panel").forEach(p => (p.hidden = p.id !== "panel-" + aba));
+  $("bank-bar").hidden = aba === "simulador";
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => mudarAba(b.dataset.tab)));
+document.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => mudarAba(b.dataset.goto)));
+
+// Qualquer elemento com data-banco (chips, barras, cartões) muda o banco escolhido.
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-banco]");
+  if (b) escolherBanco(b.dataset.banco === estado.banco && b.dataset.banco !== TODOS ? TODOS : b.dataset.banco);
+});
+
+$("clear-sample").addEventListener("click", () => {
+  estado.investimentos = [];
+  salvarCarteira();
+  renderTudo();
+  mudarAba("investimentos");
+});
+
+/* ---------- Autocompletar do formulário ---------- */
+// Ativos do catálogo + os que o usuário já cadastrou (sem repetir).
+function catalogoDeAtivos() {
+  const meus = estado.investimentos.map(i => ({ ticker: i.ticker || "", nome: i.nome, tipo: i.tipo }));
+  const vistos = new Set();
+  return [...meus, ...ATIVOS].filter(a => {
+    const k = normalizar(a.ticker || a.nome);
+    if (vistos.has(k)) return false;
+    vistos.add(k);
+    return true;
+  });
+}
+const sugestaoDeAtivo = (a, principal) => ({
+  valor: principal === "ticker" ? a.ticker : a.nome,
+  principal: principal === "ticker" ? a.ticker : a.nome,
+  detalhe: principal === "ticker" ? a.nome : a.ticker,
+  etiqueta: nomeTipo(a.tipo),
+  ativo: a,
+});
+// Ao escolher um ativo, preenche código, nome e tipo de uma vez.
+function preencherAtivo({ ativo }) {
+  $("f-ticker").value = ativo.ticker || "";
+  $("f-nome").value = ativo.nome;
+  $("f-tipo").value = nomeTipo(ativo.tipo);
+  const meu = estado.investimentos.find(i => (ativo.ticker && i.ticker === ativo.ticker) || i.nome === ativo.nome);
+  if (meu && !$("f-banco").value) $("f-banco").value = meu.banco || "";
+}
+// Investimento já cadastrado com o mesmo código ou nome do formulário.
+const ativoDoFormulario = () => {
+  const t = $("f-ticker").value.trim().toUpperCase(), n = normalizar($("f-nome").value);
+  return estado.investimentos.find(i => (t && i.ticker === t) || (n && normalizar(i.nome) === n));
+};
+// Sugestões para campos de número: valores úteis que começam com o que foi digitado.
+function sugerirNumeros(opcoes) {
+  return texto => {
+    const vistos = new Set();
+    return opcoes()
+      .filter(o => o.valor > 0 && !vistos.has(o.valor) && vistos.add(o.valor))
+      .filter(o => !texto || String(o.valor).startsWith(String(texto).replace(",", ".")))
+      .map(o => ({ valor: String(o.valor), principal: o.rotulo || String(o.valor).replace(".", ","), detalhe: o.detalhe }));
+  };
+}
+
+autocompletar($("f-ticker"), texto =>
+  filtrarPor(catalogoDeAtivos().filter(a => a.ticker), texto, ["ticker", "nome"]).map(a => sugestaoDeAtivo(a, "ticker")),
+  preencherAtivo);
+
+autocompletar($("f-nome"), texto =>
+  filtrarPor(catalogoDeAtivos(), texto, ["nome", "ticker"]).map(a => sugestaoDeAtivo(a, "nome")),
+  preencherAtivo);
+
+autocompletar($("f-tipo"), texto =>
+  filtrarPor(TIPOS, texto, ["nome"], 10).map(t => ({ valor: t.nome, principal: t.nome })));
+
+autocompletar($("f-banco"), texto => {
+  const meus = bancosDaCarteira().filter(b => b !== SEM_BANCO);
+  const todos = [...new Set([...meus, ...BANCOS])].map(nome => ({ nome, meu: meus.includes(nome) }));
+  return filtrarPor(todos, texto, ["nome"]).map(b => ({ valor: b.nome, principal: b.nome, etiqueta: b.meu ? "na sua carteira" : "" }));
+});
+
+autocompletar($("f-qtd"), sugerirNumeros(() => {
+  const meu = ativoDoFormulario();
+  return [
+    ...(meu ? [{ valor: meu.quantidade, detalhe: "quantidade que você já tem" }] : []),
+    ...[1, 10, 50, 100, 200, 500, 1000].map(v => ({ valor: v })),
+  ];
+}));
+
+autocompletar($("f-pm"), sugerirNumeros(() => {
+  const meu = ativoDoFormulario();
+  const pa = +$("f-pa").value;
+  return [
+    ...(meu ? [{ valor: meu.precoMedio, rotulo: brl.format(meu.precoMedio), detalhe: "seu preço médio atual" }] : []),
+    ...(pa > 0 ? [{ valor: pa, rotulo: brl.format(pa), detalhe: "igual ao preço atual" }] : []),
+  ];
+}));
+
+autocompletar($("f-pa"), sugerirNumeros(() => {
+  const meu = ativoDoFormulario();
+  const pm = +$("f-pm").value;
+  return [
+    ...(meu ? [{ valor: meu.precoAtual, rotulo: brl.format(meu.precoAtual), detalhe: "último preço que você salvou" }] : []),
+    ...(pm > 0 ? [{ valor: pm, rotulo: brl.format(pm), detalhe: "igual ao preço médio" }] : []),
+  ];
+}));
+
+/* ---------- Autocompletar do simulador ---------- */
+const reais = v => ({ valor: v, rotulo: brl.format(v) });
+autocompletar($("s-inicial"), sugerirNumeros(() => [
+  { valor: Math.round(resumo(estado.investimentos).total), rotulo: brl.format(Math.round(resumo(estado.investimentos).total)), detalhe: "valor da sua carteira" },
+  ...[1000, 5000, 10000, 50000, 100000].map(reais)]));
+autocompletar($("s-mensal"), sugerirNumeros(() => [100, 200, 300, 500, 1000, 2000].map(reais)));
+autocompletar($("s-anos"), sugerirNumeros(() => [1, 2, 5, 10, 15, 20, 30].map(v => ({ valor: v, rotulo: v + (v > 1 ? " anos" : " ano") }))));
+autocompletar($("s-taxa"), sugerirNumeros(() => TAXAS_REFERENCIA.map(t => ({ valor: t.taxa, rotulo: t.taxa.toLocaleString("pt-BR") + "%", detalhe: t.nome }))));
+
+function limparFormulario() {
+  $("inv-form").reset();
+  estado.editandoId = null;
+  $("form-title").textContent = "Adicionar investimento";
+  $("save-btn").textContent = "Adicionar";
+  $("cancel-edit").hidden = true;
+}
+
+$("inv-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const dados = {
+    nome: $("f-nome").value.trim(),
+    ticker: $("f-ticker").value.trim().toUpperCase(),
+    tipo: (TIPOS.find(t => normalizar(t.nome) === normalizar($("f-tipo").value)) || {}).id,
+    banco: $("f-banco").value.trim(),
+    quantidade: +$("f-qtd").value,
+    precoMedio: +$("f-pm").value,
+    precoAtual: +$("f-pa").value,
+  };
+  if (!dados.tipo) {
+    $("form-msg").textContent = "Escolha um tipo da lista: " + TIPOS.map(t => t.nome).join(", ") + ".";
+    return;
+  }
+  if (!dados.nome || !dados.banco || !(dados.quantidade > 0)) {
+    $("form-msg").textContent = "Preencha o nome, o banco e uma quantidade maior que zero.";
+    return;
+  }
+  // Ao adicionar o primeiro investimento real, a carteira de exemplo sai.
+  if (estado.ehExemplo) estado.investimentos = [];
+  if (estado.editandoId) {
+    estado.investimentos = estado.investimentos.map(i => i.id === estado.editandoId ? { ...i, ...dados } : i);
+    $("form-msg").textContent = `${dados.ticker || dados.nome} atualizado.`;
+  } else {
+    estado.investimentos.push({ id: novoId(), ...dados });
+    $("form-msg").textContent = `${dados.ticker || dados.nome} adicionado à carteira.`;
+  }
+  salvarCarteira();
+  limparFormulario();
+  renderTudo();
+});
+
+$("cancel-edit").addEventListener("click", () => { limparFormulario(); $("form-msg").textContent = ""; });
+
+$("inv-body").addEventListener("click", e => {
+  const ed = e.target.closest("[data-edit]");
+  const del = e.target.closest("[data-del]");
+  if (ed) {
+    const i = estado.investimentos.find(x => x.id === ed.dataset.edit);
+    if (estado.ehExemplo) { estado.ehExemplo = false; salvarCarteira(); renderResumo(); }
+    estado.editandoId = i.id;
+    $("f-nome").value = i.nome; $("f-ticker").value = i.ticker; $("f-tipo").value = nomeTipo(i.tipo); $("f-banco").value = i.banco || "";
+    $("f-qtd").value = i.quantidade; $("f-pm").value = i.precoMedio; $("f-pa").value = i.precoAtual;
+    $("form-title").textContent = `Editar ${i.ticker || i.nome}`;
+    $("save-btn").textContent = "Salvar alterações";
+    $("cancel-edit").hidden = false;
+    $("form-msg").textContent = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  if (del) {
+    // Confirmação em dois cliques: o primeiro arma o botão, o segundo remove.
+    if (!del.classList.contains("armed")) {
+      del.classList.add("armed"); del.textContent = "Confirmar";
+      setTimeout(() => { del.classList.remove("armed"); del.textContent = "Remover"; }, 3000);
+      return;
+    }
+    estado.investimentos = estado.investimentos.filter(x => x.id !== del.dataset.del);
+    salvarCarteira();
+    renderTudo();
+  }
+});
+
+$("presets").innerHTML = TAXAS_REFERENCIA.map(t =>
+  `<button class="chip" data-taxa="${t.taxa}">${esc(t.nome)} · ${t.taxa.toLocaleString("pt-BR")}%</button>`).join("");
+$("presets").addEventListener("click", e => {
+  const c = e.target.closest(".chip");
+  if (c) { $("s-taxa").value = c.dataset.taxa; renderSimulador(); }
+});
+["s-inicial", "s-mensal", "s-anos", "s-taxa"].forEach(id => $(id).addEventListener("input", renderSimulador));
+
+/* =====================================================================
+   7. INICIALIZAÇÃO
+   ===================================================================== */
+renderTudo();
+renderSimulador();
+fonteDeDados.maioresAltas().then(renderAltas);
+fonteDeDados.noticias().then(renderNoticias);
+</script>
+
+</body>
+</html>
