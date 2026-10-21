@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Carteira Verde: acompanhe quanto sua carteira vale, por tipo e por banco, e simule investimentos.">
+<meta name="description" content="Carteira Verde: acompanhe quanto sua carteira vale, por tipo e por banco, sua renda fixa, e simule investimentos.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect width='20' height='20' rx='5' fill='%23e7ebee'/%3E%3Cpath d='M3 15 L7.5 9.5 L11 12 L17 5' fill='none' stroke='%230f7a4d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <title>Carteira Verde</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -217,6 +217,35 @@ tr:hover td { background: var(--surface); }
 .subhead { font-size: 15px; font-weight: 700; margin: 0; font-family: var(--font-body); }
 @media (max-width: 520px) { .bar-row { grid-template-columns: 1fr auto; } .bar-row .bar-track { grid-column: 1 / -1; grid-row: 2; } .bar-row .bv { min-width: 0; } }
 
+/* ---------- Formulários: grupos, erros, caixas de seleção ---------- */
+.full { grid-column: 1 / -1; }
+.err { color: var(--red); font-size: 12.5px; font-weight: 500; min-height: 0; }
+.err:empty { display: none; }
+label.f input[aria-invalid="true"] { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--green); }
+.group { display: grid; gap: 14px; padding: 16px; border: 1px dashed var(--silver); border-radius: 12px; background: var(--surface); }
+.group-title { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+
+/* ---------- Renda fixa ---------- */
+.rf-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.rf-stats .stat { background: var(--surface); }
+.rf-stats .stat small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.idx { display: inline-block; font-size: 12px; font-weight: 700; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.bar-row.static { cursor: default; }
+.bar-row.static:hover { background: none; }
+
+/* ---------- Perfil ---------- */
+.profile-head { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.avatar {
+  width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: var(--silver-grad); border: 2px solid var(--green); font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--green);
+}
+.profile-head h2 { font-size: 22px; }
+.profile-facts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.privacy { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--silver); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+.privacy svg { flex: none; margin-top: 2px; }
+
 footer { font-size: 12.5px; color: var(--muted); text-align: center; padding-bottom: 24px; }
 @media (prefers-reduced-motion: no-preference) { .panel { animation: fade .25s ease; } @keyframes fade { from { opacity: .4; transform: translateY(4px); } to { opacity: 1; transform: none; } } }
 </style>
@@ -235,7 +264,9 @@ footer { font-size: 12.5px; color: var(--muted); text-align: center; padding-bot
     <nav class="tabs" role="tablist" aria-label="Seções">
       <button role="tab" id="tab-inicio" data-tab="inicio" aria-selected="true">Início</button>
       <button role="tab" id="tab-investimentos" data-tab="investimentos" aria-selected="false">Meus investimentos</button>
+      <button role="tab" id="tab-rendafixa" data-tab="rendafixa" aria-selected="false">Renda fixa</button>
       <button role="tab" id="tab-simulador" data-tab="simulador" aria-selected="false">Simulador</button>
+      <button role="tab" id="tab-perfil" data-tab="perfil" aria-selected="false">Meu perfil</button>
     </nav>
   </div>
 </header>
@@ -326,17 +357,37 @@ footer { font-size: 12.5px; color: var(--muted); text-align: center; padding-bot
           <label class="f">Banco / corretora
             <span class="ac"><input id="f-banco" required placeholder="Ex.: Nubank"></span>
           </label>
-          <label class="f">Quantidade
+          <label class="f"><span id="l-qtd">Quantidade</span>
             <span class="ac"><input id="f-qtd" type="number" min="0" step="any" required placeholder="Ex.: 100"></span>
           </label>
-          <label class="f">Preço médio de compra (R$)
+          <label class="f"><span id="l-pm">Preço médio de compra (R$)</span>
             <span class="ac"><input id="f-pm" type="number" min="0" step="0.01" required placeholder="Ex.: 32,50"></span>
           </label>
-          <label class="f">Preço atual (R$)
-            <span class="ac"><input id="f-pa" type="number" min="0" step="0.01" required placeholder="Ex.: 35,10"></span>
+          <label class="f"><span id="l-pa">Preço atual (R$)</span>
+            <span class="ac"><input id="f-pa" type="number" min="0" step="0.01" placeholder="Ex.: 35,10"></span>
           </label>
+
+          <div class="group full" id="rf-fields" hidden>
+            <div class="group-title"><h3 class="subhead">Dados da renda fixa</h3><span class="hint">Usados para calcular quanto o título vai render até o vencimento.</span></div>
+            <div class="fields">
+              <label class="f">Indexador
+                <span class="ac"><input id="f-idx" placeholder="Ex.: % do CDI"></span>
+              </label>
+              <label class="f"><span id="l-taxa">Taxa</span>
+                <span class="ac"><input id="f-taxa" type="number" min="0" step="0.01" placeholder="Ex.: 110"></span>
+                <span class="hint" id="h-taxa">Escolha o indexador primeiro.</span>
+              </label>
+              <label class="f">Data da aplicação
+                <input id="f-aplic" type="date">
+              </label>
+              <label class="f">Vencimento
+                <input id="f-venc" type="date">
+              </label>
+              <label class="check full"><input id="f-isento" type="checkbox"> Isento de imposto de renda (LCI, LCA, CRI, CRA, poupança, debênture incentivada)</label>
+            </div>
+          </div>
         </form>
-        <p class="hint" style="margin:12px 0 16px">Para renda fixa ou Tesouro, use quantidade 1 e informe o valor aplicado e o valor atual.</p>
+        <p class="hint" style="margin:12px 0 16px" id="form-hint">Para renda fixa ou Tesouro, escolha o tipo e aparecem os campos de indexador, taxa e vencimento.</p>
         <div class="actions">
           <button class="btn" type="submit" form="inv-form" id="save-btn">Adicionar</button>
           <button class="btn ghost" type="button" id="cancel-edit" hidden>Cancelar edição</button>
@@ -359,6 +410,55 @@ footer { font-size: 12.5px; color: var(--muted); text-align: center; padding-bot
     </div>
   </section>
 
+  <!-- ===================== RENDA FIXA ===================== -->
+  <section class="panel" id="panel-rendafixa" role="tabpanel" aria-labelledby="tab-rendafixa" hidden>
+    <div style="display:grid; gap:20px">
+      <div class="card">
+        <div class="card-head"><h2>Sua renda fixa</h2><span class="eyebrow" id="rf-scope">CDB, LCI, LCA, Tesouro Direto e outros</span></div>
+        <div class="rf-stats">
+          <div class="stat"><span class="eyebrow">Valor atual</span><b class="num" id="rf-atual">R$ 0,00</b><small id="rf-qtd"></small></div>
+          <div class="stat"><span class="eyebrow">Projeção no vencimento (bruto)</span><b class="num" id="rf-bruto">R$ 0,00</b><small>antes do imposto</small></div>
+          <div class="stat"><span class="eyebrow">Projeção líquida</span><b class="num up" id="rf-liquido">R$ 0,00</b><small id="rf-ir"></small></div>
+          <div class="stat"><span class="eyebrow">Próximo vencimento</span><b id="rf-prox">Nenhum</b><small id="rf-prox-det"></small></div>
+        </div>
+      </div>
+
+      <div class="card" id="rf-empty" hidden>
+        <p style="margin:0 0 12px">Você ainda não tem renda fixa cadastrada.</p>
+        <button class="btn" id="rf-add">Adicionar renda fixa</button>
+      </div>
+
+      <div class="card" id="rf-table-card">
+        <div class="card-head"><h2>Títulos</h2><button class="btn small ghost" id="rf-add2">Adicionar renda fixa</button></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Título</th><th>Banco</th><th>Rendimento</th><th class="r">Taxa efetiva</th><th>Vencimento</th>
+              <th class="r">Valor atual</th><th class="r">Projeção bruta</th><th class="r">Projeção líquida</th>
+            </tr></thead>
+            <tbody id="rf-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Quanto vence em cada ano</h2><span class="eyebrow">valor projetado bruto</span></div>
+          <div class="bars" id="rf-anos"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Premissas de mercado</h2><span class="eyebrow">ao ano</span></div>
+          <div class="fields">
+            <label class="f">CDI (%)<span class="ac"><input id="p-cdi" type="number" min="0" step="0.05"></span></label>
+            <label class="f">Selic (%)<span class="ac"><input id="p-selic" type="number" min="0" step="0.05"></span></label>
+            <label class="f">IPCA esperado (%)<span class="ac"><input id="p-ipca" type="number" min="0" step="0.05"></span></label>
+          </div>
+          <p class="hint" style="margin:12px 0 0">As projeções usam essas taxas como se ficassem iguais até o vencimento. Ajuste quando o mercado mudar. O imposto segue a tabela regressiva (22,5% até 180 dias, 20% até 360, 17,5% até 720 e 15% depois).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===================== SIMULADOR ===================== -->
   <section class="panel" id="panel-simulador" role="tabpanel" aria-labelledby="tab-simulador" hidden>
     <div style="display:grid; gap:20px">
@@ -368,7 +468,9 @@ footer { font-size: 12.5px; color: var(--muted); text-align: center; padding-bot
           <label class="f">Valor inicial (R$)<span class="ac"><input id="s-inicial" type="number" min="0" step="100" value="5000"></span></label>
           <label class="f">Aporte mensal (R$)<span class="ac"><input id="s-mensal" type="number" min="0" step="50" value="500"></span></label>
           <label class="f">Prazo (anos)<span class="ac"><input id="s-anos" type="number" min="1" max="50" step="1" value="10"></span></label>
-          <label class="f">Rentabilidade ao ano (%)<span class="ac"><input id="s-taxa" type="number" min="0" step="0.1" value="12"></span></label>
+          <label class="f">Tipo de rendimento<span class="ac"><input id="s-idx" value="Taxa fixa ao ano"></span></label>
+          <label class="f"><span id="l-staxa">Rentabilidade ao ano (%)</span><span class="ac"><input id="s-taxa" type="number" min="0" step="0.1" value="12"></span><span class="hint" id="h-staxa"></span></label>
+          <label class="check full"><input id="s-ir" type="checkbox"> Descontar imposto de renda (tabela regressiva da renda fixa)</label>
         </div>
         <div style="margin-top:14px; display:grid; gap:8px">
           <span class="hint">Taxas de referência (estimativas, edite à vontade):</span>
@@ -381,18 +483,84 @@ footer { font-size: 12.5px; color: var(--muted); text-align: center; padding-bot
           <div class="stat main"><span class="eyebrow">Valor final</span><b class="num" id="r-final">R$ 0,00</b></div>
           <div class="stat"><span class="eyebrow">Total aportado</span><b class="num" id="r-aportado">R$ 0,00</b></div>
           <div class="stat"><span class="eyebrow">Rendimento (juros)</span><b class="num up" id="r-juros">R$ 0,00</b></div>
+          <div class="stat" id="r-ir-box" hidden><span class="eyebrow">Imposto de renda estimado</span><b class="num down" id="r-ir">R$ 0,00</b></div>
         </div>
         <div class="chart" style="margin-top:20px">
           <div class="chart-legend"><span><i style="background:var(--green)"></i>Valor acumulado</span><span><i style="background:var(--silver)"></i>Dinheiro aportado</span></div>
           <svg id="sim-chart" viewBox="0 0 960 320" role="img" aria-label="Evolução do investimento simulado"></svg>
           <div class="tip num" id="sim-tip" hidden></div>
         </div>
-        <p class="hint" style="margin:10px 0 0">Simulação sem impostos e taxas. Rentabilidade passada não garante rentabilidade futura.</p>
+        <p class="hint" style="margin:10px 0 0" id="sim-nota">Simulação sem impostos e taxas. Rentabilidade passada não garante rentabilidade futura.</p>
       </div>
     </div>
   </section>
 
-  <footer>Seus investimentos ficam salvos só neste navegador. Notícias e altas são dados de exemplo.</footer>
+  <!-- ===================== MEU PERFIL ===================== -->
+  <section class="panel" id="panel-perfil" role="tabpanel" aria-labelledby="tab-perfil" hidden>
+    <div style="display:grid; gap:20px">
+      <div class="card">
+        <div class="profile-head">
+          <div class="avatar" id="pf-avatar" aria-hidden="true">?</div>
+          <div style="min-width:0">
+            <h2 id="pf-titulo">Seu perfil</h2>
+            <div class="profile-facts" id="pf-fatos"><span class="hint">Preencha seus dados abaixo.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="privacy" role="note">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="9" rx="2" fill="none" stroke="#0f7a4d" stroke-width="1.8"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="#0f7a4d" stroke-width="1.8"/></svg>
+        <span><b>Seus dados ficam só neste navegador, neste aparelho.</b> Nada é enviado para servidores. A única consulta externa é o CEP, que vai para o ViaCEP para preencher o endereço. Em computador compartilhado, use "Apagar meus dados" ao terminar.</span>
+      </div>
+
+      <form class="card" id="pf-form" autocomplete="off" novalidate>
+        <div style="display:grid; gap:22px">
+          <div style="display:grid; gap:14px">
+            <h3 class="subhead">Dados pessoais</h3>
+            <div class="fields">
+              <label class="f">Nome completo<span class="ac"><input id="pf-nome" autocomplete="name" placeholder="Ex.: Lucas Silva"></span><span class="err" id="e-nome"></span></label>
+              <label class="f">Como prefere ser chamado<span class="ac"><input id="pf-apelido" placeholder="Ex.: Lucas"></span></label>
+              <label class="f">CPF<input id="pf-cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14"><span class="err" id="e-cpf"></span></label>
+              <label class="f">Data de nascimento<input id="pf-nasc" type="date"><span class="err" id="e-nasc"></span></label>
+              <label class="f">Celular<input id="pf-cel" inputmode="tel" placeholder="(11) 91234-5678" maxlength="15"><span class="err" id="e-cel"></span></label>
+              <label class="f">E-mail<span class="ac"><input id="pf-email" type="email" inputmode="email" placeholder="voce@email.com"></span><span class="err" id="e-email"></span></label>
+              <label class="f">Profissão<span class="ac"><input id="pf-prof" placeholder="Ex.: Engenheiro"></span></label>
+              <label class="f">Renda mensal (R$)<span class="ac"><input id="pf-renda" type="number" min="0" step="100" placeholder="Ex.: 5000"></span></label>
+            </div>
+          </div>
+
+          <div style="display:grid; gap:14px">
+            <h3 class="subhead">Endereço</h3>
+            <div class="fields">
+              <label class="f">CEP<input id="pf-cep" inputmode="numeric" placeholder="00000-000" maxlength="9"><span class="hint" id="h-cep">Digite o CEP para preencher o endereço.</span><span class="err" id="e-cep"></span></label>
+              <label class="f full">Rua / avenida<input id="pf-rua" autocomplete="address-line1"></label>
+              <label class="f">Número<input id="pf-num" inputmode="numeric"></label>
+              <label class="f">Complemento<span class="ac"><input id="pf-comp" placeholder="Ex.: Apto 12"></span></label>
+              <label class="f">Bairro<input id="pf-bairro"></label>
+              <label class="f">Cidade<input id="pf-cidade"></label>
+              <label class="f">Estado (UF)<span class="ac"><input id="pf-uf" maxlength="2" placeholder="Ex.: SP"></span><span class="err" id="e-uf"></span></label>
+            </div>
+          </div>
+
+          <div style="display:grid; gap:14px">
+            <h3 class="subhead">Perfil de investidor</h3>
+            <div class="fields">
+              <label class="f">Perfil<span class="ac"><input id="pf-perfil" placeholder="Conservador, moderado ou arrojado"></span></label>
+              <label class="f">Objetivo principal<span class="ac"><input id="pf-objetivo" placeholder="Ex.: Aposentadoria"></span></label>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn" type="submit" id="pf-salvar">Salvar perfil</button>
+            <button class="btn danger" type="button" id="pf-apagar">Apagar meus dados</button>
+            <span class="hint" id="pf-msg" role="status"></span>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <footer>Seus investimentos e seu perfil ficam salvos só neste navegador. Notícias e altas são dados de exemplo.</footer>
 </main>
 
 <script>
@@ -409,11 +577,28 @@ const TIPOS = [
   { id: "cripto",     nome: "Cripto",         cor: "#0a8fa3" },
 ];
 
+// Taxas de mercado usadas nas projeções (ao ano). O usuário pode mudar na aba Renda fixa.
+const PREMISSAS_PADRAO = { cdi: 14.9, selic: 15.0, ipca: 4.5 };
+
+// Como cada título rende. "dica" aparece embaixo do campo Taxa.
+const INDEXADORES = [
+  { id: "cdi",   nome: "% do CDI",  rotuloTaxa: "Percentual do CDI (%)", dica: "Ex.: 110 para 110% do CDI" },
+  { id: "ipca",  nome: "IPCA +",    rotuloTaxa: "Taxa acima do IPCA (% ao ano)", dica: "Ex.: 6,5 para IPCA + 6,5% ao ano" },
+  { id: "selic", nome: "Selic +",   rotuloTaxa: "Taxa acima da Selic (% ao ano)", dica: "Ex.: 0,1 para Selic + 0,1%" },
+  { id: "pre",   nome: "Prefixado", rotuloTaxa: "Taxa prefixada (% ao ano)", dica: "Ex.: 13 para 13% ao ano" },
+];
+
+// Tipos que usam os campos de renda fixa (indexador, taxa, vencimento).
+const TIPOS_RENDA_FIXA = ["rendafixa", "tesouro"];
+
+// Atalhos do simulador. idx "fixa" = taxa ao ano direta.
 const TAXAS_REFERENCIA = [
-  { nome: "Poupança",        taxa: 6.2 },
-  { nome: "100% do CDI",     taxa: 14.9 },
-  { nome: "CDB 110% CDI",    taxa: 16.4 },
-  { nome: "Ações (longo prazo)", taxa: 12 },
+  { nome: "Poupança",            idx: "fixa",  taxa: 6.17, isento: true },
+  { nome: "100% do CDI",         idx: "cdi",   taxa: 100 },
+  { nome: "CDB 110% do CDI",     idx: "cdi",   taxa: 110 },
+  { nome: "LCI/LCA 95% do CDI",  idx: "cdi",   taxa: 95, isento: true },
+  { nome: "Tesouro IPCA + 6,5%", idx: "ipca",  taxa: 6.5 },
+  { nome: "Ações (longo prazo)", idx: "fixa",  taxa: 12 },
 ];
 
 // Sugestões que aparecem no campo "Banco / corretora". O usuário também pode digitar outro nome.
@@ -474,13 +659,50 @@ const ATIVOS = [
 ].map(([ticker, nome, tipo]) => ({ ticker, nome, tipo }));
 const TODOS = "__todos__";
 
+// Ao escolher um destes nomes no cadastro, o indexador (e às vezes o vencimento) já vem preenchido.
+// venc: "MM-DD" do vencimento; o ano sai do próprio nome do título.
+const PADROES_RENDA_FIXA = [
+  { contem: "tesouro selic",     idx: "selic", taxa: 0.1, venc: "03-01" },
+  { contem: "tesouro prefixado", idx: "pre",   venc: "01-01" },
+  { contem: "tesouro ipca",      idx: "ipca",  venc: "05-15" },
+  { contem: "tesouro renda",     idx: "ipca" },
+  { contem: "tesouro educa",     idx: "ipca" },
+  { contem: "lci",               idx: "cdi",   isento: true },
+  { contem: "lca",               idx: "cdi",   isento: true },
+  { contem: "cri",               idx: "ipca",  isento: true },
+  { contem: "cra",               idx: "ipca",  isento: true },
+  { contem: "poupanca",          idx: "pre",   taxa: 6.17, isento: true },
+  { contem: "cdb",               idx: "cdi" },
+  { contem: "fundo di",          idx: "cdi" },
+  { contem: "caixinha",          idx: "cdi",   taxa: 100 },
+  { contem: "debenture",         idx: "ipca" },
+];
+
+// Listas para o autocompletar do perfil.
+const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+const DOMINIOS_EMAIL = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com.br", "icloud.com", "live.com", "uol.com.br", "bol.com.br"];
+const PROFISSOES = ["Administrador", "Advogado", "Analista", "Arquiteto", "Autônomo", "Contador", "Dentista", "Designer",
+  "Desenvolvedor", "Empresário", "Enfermeiro", "Engenheiro", "Estudante", "Farmacêutico", "Médico", "Motorista",
+  "Professor", "Psicólogo", "Servidor público", "Vendedor", "Aposentado"];
+const PERFIS_INVESTIDOR = [
+  { nome: "Conservador", detalhe: "prefere segurança, aceita render menos" },
+  { nome: "Moderado",    detalhe: "equilibra segurança e rentabilidade" },
+  { nome: "Arrojado",    detalhe: "aceita oscilações para buscar mais retorno" },
+];
+const OBJETIVOS = ["Reserva de emergência", "Aposentadoria", "Comprar imóvel", "Comprar carro", "Viagem", "Educação dos filhos", "Independência financeira", "Renda extra"];
+const COMPLEMENTOS = ["Apto ", "Casa ", "Bloco ", "Sala ", "Fundos"];
+
 // Carteira mostrada até o usuário adicionar a própria (marcada como exemplo na tela).
 const CARTEIRA_EXEMPLO = [
   { nome: "Itaú Unibanco", ticker: "ITUB4", tipo: "acoes", banco: "XP Investimentos", quantidade: 200, precoMedio: 31.2, precoAtual: 36.85 },
   { nome: "WEG",           ticker: "WEGE3", tipo: "acoes", banco: "XP Investimentos", quantidade: 80,  precoMedio: 41.5, precoAtual: 39.9 },
   { nome: "Maxi Renda",    ticker: "MXRF11", tipo: "fiis", banco: "Nubank", quantidade: 600, precoMedio: 9.8, precoAtual: 10.12 },
-  { nome: "CDB Nubank 110% CDI", ticker: "", tipo: "rendafixa", banco: "Nubank", quantidade: 1, precoMedio: 10000, precoAtual: 11240 },
-  { nome: "Tesouro IPCA+ 2035", ticker: "", tipo: "tesouro", banco: "Banco do Brasil", quantidade: 1, precoMedio: 8000, precoAtual: 8710 },
+  { nome: "CDB Nubank 110% CDI", ticker: "", tipo: "rendafixa", banco: "Nubank", quantidade: 1, precoMedio: 10000, precoAtual: 11240,
+    idx: "cdi", taxa: 110, aplicacao: "2025-09-10", vencimento: "2027-09-10", isento: false },
+  { nome: "LCA Inter 95% CDI", ticker: "", tipo: "rendafixa", banco: "Inter", quantidade: 1, precoMedio: 5000, precoAtual: 5410,
+    idx: "cdi", taxa: 95, aplicacao: "2026-01-15", vencimento: "2027-01-15", isento: true },
+  { nome: "Tesouro IPCA+ 2035", ticker: "", tipo: "tesouro", banco: "Banco do Brasil", quantidade: 1, precoMedio: 8000, precoAtual: 8710,
+    idx: "ipca", taxa: 6.8, aplicacao: "2024-08-01", vencimento: "2035-05-15", isento: false },
   { nome: "ETF S&P 500",   ticker: "IVVB11", tipo: "exterior", banco: "XP Investimentos", quantidade: 15, precoMedio: 290, precoAtual: 352.4 },
 ];
 
@@ -514,6 +736,15 @@ const Armazem = {
   },
 };
 
+// Leitura e escrita genéricas, para o perfil e as premissas.
+const Local = {
+  ler(chave, padrao) { try { const t = localStorage.getItem(chave); return t ? JSON.parse(t) : padrao; } catch { return padrao; } },
+  gravar(chave, valor) { try { localStorage.setItem(chave, JSON.stringify(valor)); return true; } catch { return false; } },
+  apagar(chave) { try { localStorage.removeItem(chave); } catch { /* nada a fazer */ } },
+};
+const CHAVE_PERFIL = "carteira-verde:perfil";
+const CHAVE_PREMISSAS = "carteira-verde:premissas";
+
 const novoId = () => Math.random().toString(36).slice(2, 10);
 
 const estado = {
@@ -522,6 +753,8 @@ const estado = {
   ehExemplo: Armazem.carregar() === null,
   editandoId: null,
   banco: TODOS,   // banco escolhido no seletor
+  premissas: { ...PREMISSAS_PADRAO, ...Local.ler(CHAVE_PREMISSAS, {}) },
+  perfil: Local.ler(CHAVE_PERFIL, {}),
 };
 
 function salvarCarteira() {
@@ -564,6 +797,58 @@ function porTipo(lista) {
     .sort((a, b) => b.valor - a.valor);
 }
 
+/* ---------- Renda fixa ---------- */
+const ehRendaFixa = i => TIPOS_RENDA_FIXA.includes(i.tipo);
+const DIA = 86400000;
+const hoje = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const lerData = t => (t ? new Date(t + "T00:00:00") : null);
+const dataBR = t => (t ? lerData(t).toLocaleDateString("pt-BR") : "—");
+const diasEntre = (a, b) => Math.round((b - a) / DIA);
+const num = v => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+
+// Converte indexador + taxa em rentabilidade efetiva ao ano (%), usando as premissas.
+function taxaEfetiva(idx, taxa, premissas = estado.premissas) {
+  const t = +taxa || 0;
+  if (idx === "cdi")   return premissas.cdi * t / 100;
+  if (idx === "ipca")  return ((1 + premissas.ipca / 100) * (1 + t / 100) - 1) * 100;
+  if (idx === "selic") return premissas.selic + t;
+  return t; // prefixado ou taxa fixa
+}
+
+function descreverRendimento(i) {
+  if (!i.idx) return "Não informado";
+  if (i.idx === "cdi") return `${num(i.taxa)}% do CDI`;
+  if (i.idx === "ipca") return `IPCA + ${num(i.taxa)}%`;
+  if (i.idx === "selic") return `Selic + ${num(i.taxa)}%`;
+  return `${num(i.taxa)}% ao ano`;
+}
+
+// Alíquota da tabela regressiva de IR conforme os dias aplicados.
+const aliquotaIR = dias => (dias <= 180 ? 22.5 : dias <= 360 ? 20 : dias <= 720 ? 17.5 : 15);
+
+// Projeta um título até o vencimento: valor bruto, imposto e líquido.
+function projetar(i) {
+  const venc = lerData(i.vencimento);
+  if (!venc || !i.idx) return null;
+  const restante = Math.max(0, diasEntre(hoje(), venc));
+  const taxa = taxaEfetiva(i.idx, i.taxa);
+  const bruto = valorAtual(i) * Math.pow(1 + taxa / 100, restante / 365);
+  const aplic = lerData(i.aplicacao);
+  const prazoTotal = aplic ? diasEntre(aplic, venc) : restante;
+  const lucro = Math.max(0, bruto - valorInvestido(i));
+  const aliquota = i.isento ? 0 : aliquotaIR(prazoTotal);
+  const ir = lucro * aliquota / 100;
+  return { bruto, ir, liquido: bruto - ir, aliquota, restante, taxa };
+}
+
+// Estima o valor atual a partir da data de aplicação, quando o usuário não informa.
+function estimarValorAtual(aplicado, idx, taxa, aplicacao) {
+  const d = lerData(aplicacao);
+  if (!d || !idx) return aplicado;
+  const dias = Math.max(0, diasEntre(d, hoje()));
+  return aplicado * Math.pow(1 + taxaEfetiva(idx, taxa) / 100, dias / 365);
+}
+
 // Juros compostos com aportes mensais. Retorna o saldo ano a ano.
 function simular({ inicial, mensal, anos, taxaAno }) {
   const taxaMes = Math.pow(1 + taxaAno / 100, 1 / 12) - 1;
@@ -584,7 +869,9 @@ const $ = id => document.getElementById(id);
 
 function renderResumo() {
   const r = resumo(visiveis());
-  $("hero-label").textContent = estado.banco === TODOS ? "Quanto sua carteira vale hoje" : `Quanto você tem em ${estado.banco}`;
+  const apelido = (estado.perfil.apelido || (estado.perfil.nome || "").split(" ")[0] || "").trim();
+  $("hero-label").textContent = estado.banco !== TODOS ? `Quanto você tem em ${estado.banco}`
+    : apelido ? `Olá, ${apelido}! Sua carteira vale hoje` : "Quanto sua carteira vale hoje";
   $("total-value").textContent = brl.format(r.total);
   $("total-invested").textContent = brl.format(r.investido);
   $("total-profit").textContent = (r.lucro >= 0 ? "+" : "") + brl.format(r.lucro);
@@ -722,7 +1009,7 @@ function renderTabela() {
     const res = valorAtual(i) - valorInvestido(i);
     const rp = valorInvestido(i) > 0 ? (res / valorInvestido(i)) * 100 : 0;
     return `<tr>
-      <td><b>${esc(i.ticker || i.nome)}</b>${i.ticker ? `<div class="hint">${esc(i.nome)}</div>` : ""}</td>
+      <td><b>${esc(i.ticker || i.nome)}</b>${i.ticker ? `<div class="hint">${esc(i.nome)}</div>` : ""}${ehRendaFixa(i) && i.idx ? `<div class="hint">${esc(descreverRendimento(i))}${i.vencimento ? ", vence " + dataBR(i.vencimento) : ""}</div>` : ""}</td>
       <td>${esc(bancoDe(i))}</td>
       <td>${esc(nomeTipo(i.tipo))}</td>
       <td class="r num">${i.quantidade.toLocaleString("pt-BR")}</td>
@@ -738,19 +1025,42 @@ function renderTabela() {
   }).join("");
 }
 
+// Opções do campo "Tipo de rendimento" do simulador.
+const RENDIMENTOS_SIMULADOR = [
+  { id: "fixa", nome: "Taxa fixa ao ano", rotulo: "Rentabilidade ao ano (%)" },
+  ...INDEXADORES.filter(x => x.id !== "pre").map(x => ({ id: x.id, nome: x.nome, rotulo: x.rotuloTaxa })),
+];
+const rendimentoSimulador = () =>
+  RENDIMENTOS_SIMULADOR.find(r => normalizar(r.nome) === normalizar($("s-idx").value)) || RENDIMENTOS_SIMULADOR[0];
+
 function renderSimulador() {
+  const rend = rendimentoSimulador();
+  const taxaDigitada = Math.max(0, +$("s-taxa").value || 0);
   const p = {
     inicial: Math.max(0, +$("s-inicial").value || 0),
     mensal: Math.max(0, +$("s-mensal").value || 0),
     anos: Math.min(50, Math.max(1, Math.round(+$("s-anos").value || 1))),
-    taxaAno: Math.max(0, +$("s-taxa").value || 0),
+    taxaAno: taxaEfetiva(rend.id, taxaDigitada),
   };
+  $("l-staxa").textContent = rend.rotulo;
+  $("h-staxa").textContent = rend.id === "fixa" ? "" : `Equivale a ${pctSemSinal(p.taxaAno)} ao ano com as premissas da aba Renda fixa.`;
+
   const pontos = simular(p);
   const fim = pontos[pontos.length - 1];
-  $("r-final").textContent = brl.format(fim.saldo);
+  const juros = fim.saldo - fim.aportado;
+  const comIR = $("s-ir").checked;
+  // Estimativa simples: aplica a alíquota do prazo total sobre todo o rendimento.
+  const ir = comIR ? juros * aliquotaIR(p.anos * 365) / 100 : 0;
+  $("r-final").textContent = brl.format(fim.saldo - ir);
   $("r-aportado").textContent = brl.format(fim.aportado);
-  $("r-juros").textContent = brl.format(fim.saldo - fim.aportado);
-  document.querySelectorAll("#presets .chip").forEach(c => c.classList.toggle("on", +c.dataset.taxa === p.taxaAno));
+  $("r-juros").textContent = brl.format(juros - ir);
+  $("r-ir-box").hidden = !comIR;
+  $("r-ir").textContent = "− " + brl.format(ir);
+  $("sim-nota").textContent = (comIR
+    ? `Valores já descontam ${num(aliquotaIR(p.anos * 365))}% de imposto sobre o rendimento (estimativa). `
+    : "Simulação sem impostos e taxas. ") + "Rentabilidade passada não garante rentabilidade futura.";
+  document.querySelectorAll("#presets .chip").forEach(c =>
+    c.classList.toggle("on", c.dataset.idx === rend.id && +c.dataset.taxa === taxaDigitada));
   desenharGrafico(pontos);
 }
 
@@ -808,8 +1118,61 @@ function niceMax(v) {
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
 }
 
+/* ---------- Tela: renda fixa ---------- */
+function renderRendaFixa() {
+  const lista = visiveis().filter(ehRendaFixa);
+  const proj = lista.map(i => ({ i, p: projetar(i) }));
+  const atual = lista.reduce((s, i) => s + valorAtual(i), 0);
+  // Títulos sem vencimento entram na projeção pelo valor atual.
+  const bruto = proj.reduce((s, x) => s + (x.p ? x.p.bruto : valorAtual(x.i)), 0);
+  const liquido = proj.reduce((s, x) => s + (x.p ? x.p.liquido : valorAtual(x.i)), 0);
+
+  $("rf-scope").textContent = estado.banco === TODOS ? "CDB, LCI, LCA, Tesouro Direto e outros" : `em ${estado.banco}`;
+  $("rf-atual").textContent = brl.format(atual);
+  $("rf-qtd").textContent = lista.length ? `${lista.length} título${lista.length > 1 ? "s" : ""}` : "";
+  $("rf-bruto").textContent = brl.format(bruto);
+  $("rf-liquido").textContent = brl.format(liquido);
+  $("rf-ir").textContent = bruto > liquido ? `${brl.format(bruto - liquido)} de imposto estimado` : "sem imposto";
+
+  const futuros = proj.filter(x => x.p).sort((a, b) => a.p.restante - b.p.restante);
+  const prox = futuros[0];
+  $("rf-prox").textContent = prox ? prox.i.nome : "Nenhum";
+  $("rf-prox-det").textContent = prox ? `${dataBR(prox.i.vencimento)}, ${prox.p.restante === 0 ? "vence hoje" : `em ${prox.p.restante} dias`}` : "Informe o vencimento dos títulos.";
+
+  $("rf-empty").hidden = lista.length > 0;
+  $("rf-table-card").hidden = lista.length === 0;
+  $("rf-body").innerHTML = proj.map(({ i, p }) => `<tr>
+      <td><b>${esc(i.nome)}</b><div class="hint">${esc(nomeTipo(i.tipo))}${i.isento ? " · isento de IR" : ""}</div></td>
+      <td>${esc(bancoDe(i))}</td>
+      <td><span class="idx">${esc(descreverRendimento(i))}</span></td>
+      <td class="r num">${i.idx ? pctSemSinal(taxaEfetiva(i.idx, i.taxa)) + " a.a." : "—"}</td>
+      <td class="num">${dataBR(i.vencimento)}${p ? `<div class="hint">${p.restante} dias</div>` : ""}</td>
+      <td class="r num">${brl.format(valorAtual(i))}</td>
+      <td class="r num">${p ? brl.format(p.bruto) : "—"}</td>
+      <td class="r num"><b>${p ? brl.format(p.liquido) : "—"}</b>${p && !i.isento ? `<div class="hint">IR ${num(p.aliquota)}%</div>` : ""}</td>
+    </tr>`).join("");
+
+  // Barras: valor projetado que vence em cada ano.
+  const porAno = {};
+  futuros.forEach(x => { const a = x.i.vencimento.slice(0, 4); porAno[a] = (porAno[a] || 0) + x.p.bruto; });
+  const anos = Object.keys(porAno).sort();
+  const maior = Math.max(...Object.values(porAno), 1);
+  $("rf-anos").innerHTML = anos.length ? anos.map(a => `<div class="bar-row static">
+      <span class="bn num">${a}</span>
+      <span class="bar-track"><span class="bar-fill" style="display:block; width:${(porAno[a] / maior) * 100}%"></span></span>
+      <span class="bv num"><b>${brl.format(porAno[a])}</b></span>
+    </div>`).join("") : `<p class="hint" style="margin:0">Informe o vencimento dos títulos para ver este gráfico.</p>`;
+}
+
+function renderPremissas() {
+  $("p-cdi").value = estado.premissas.cdi;
+  $("p-selic").value = estado.premissas.selic;
+  $("p-ipca").value = estado.premissas.ipca;
+}
+
 function renderTudo() {
   renderSeletorBancos();
+  renderRendaFixa();
   renderResumo();
   renderRosca();
   renderBancos();
@@ -931,7 +1294,7 @@ const fonteDeDados = {
 function mudarAba(aba) {
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === aba));
   document.querySelectorAll(".panel").forEach(p => (p.hidden = p.id !== "panel-" + aba));
-  $("bank-bar").hidden = aba === "simulador";
+  $("bank-bar").hidden = aba === "simulador" || aba === "perfil";
   window.scrollTo({ top: 0 });
 }
 document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => mudarAba(b.dataset.tab)));
@@ -976,6 +1339,8 @@ function preencherAtivo({ ativo }) {
   $("f-tipo").value = nomeTipo(ativo.tipo);
   const meu = estado.investimentos.find(i => (ativo.ticker && i.ticker === ativo.ticker) || i.nome === ativo.nome);
   if (meu && !$("f-banco").value) $("f-banco").value = meu.banco || "";
+  atualizarCamposRF();
+  if (TIPOS_RENDA_FIXA.includes(ativo.tipo)) aplicarPadraoRF();
 }
 // Investimento já cadastrado com o mesmo código ou nome do formulário.
 const ativoDoFormulario = () => {
@@ -1043,7 +1408,58 @@ autocompletar($("s-inicial"), sugerirNumeros(() => [
   ...[1000, 5000, 10000, 50000, 100000].map(reais)]));
 autocompletar($("s-mensal"), sugerirNumeros(() => [100, 200, 300, 500, 1000, 2000].map(reais)));
 autocompletar($("s-anos"), sugerirNumeros(() => [1, 2, 5, 10, 15, 20, 30].map(v => ({ valor: v, rotulo: v + (v > 1 ? " anos" : " ano") }))));
-autocompletar($("s-taxa"), sugerirNumeros(() => TAXAS_REFERENCIA.map(t => ({ valor: t.taxa, rotulo: t.taxa.toLocaleString("pt-BR") + "%", detalhe: t.nome }))));
+autocompletar($("s-taxa"), sugerirNumeros(() => TAXAS_REFERENCIA.filter(t => t.idx === rendimentoSimulador().id)
+  .map(t => ({ valor: t.taxa, rotulo: t.taxa.toLocaleString("pt-BR") + "%", detalhe: t.nome }))));
+autocompletar($("s-idx"), texto => filtrarPor(RENDIMENTOS_SIMULADOR, texto, ["nome"], 10)
+  .map(r => ({ valor: r.nome, principal: r.nome })));
+
+/* ---------- Autocompletar da renda fixa ---------- */
+autocompletar($("f-idx"), texto => filtrarPor(INDEXADORES, texto, ["nome"], 10)
+  .map(x => ({ valor: x.nome, principal: x.nome, detalhe: x.dica })));
+autocompletar($("f-taxa"), sugerirNumeros(() => {
+  const idx = indexadorDoFormulario();
+  const opcoes = { cdi: [90, 95, 100, 102, 105, 110, 115, 120], ipca: [5, 5.5, 6, 6.5, 7, 7.5], selic: [0, 0.05, 0.1, 0.2], pre: [10, 11, 12, 13, 14, 15] };
+  return (opcoes[idx?.id] || []).map(v => ({ valor: v, rotulo: num(v) + "%" }));
+}));
+["p-cdi", "p-selic", "p-ipca"].forEach(id => autocompletar($(id), sugerirNumeros(() => {
+  const k = id.slice(2);
+  return [{ valor: PREMISSAS_PADRAO[k], rotulo: num(PREMISSAS_PADRAO[k]) + "%", detalhe: "valor padrão do app" }];
+})));
+
+/* ---------- Campos de renda fixa no cadastro ---------- */
+const tipoDoFormulario = () => (TIPOS.find(t => normalizar(t.nome) === normalizar($("f-tipo").value)) || {}).id;
+const indexadorDoFormulario = () => INDEXADORES.find(x => normalizar(x.nome) === normalizar($("f-idx").value));
+
+function atualizarCamposRF() {
+  const rf = TIPOS_RENDA_FIXA.includes(tipoDoFormulario());
+  $("rf-fields").hidden = !rf;
+  $("l-qtd").textContent = rf ? "Quantidade (use 1)" : "Quantidade";
+  $("l-pm").textContent = rf ? "Valor aplicado (R$)" : "Preço médio de compra (R$)";
+  $("l-pa").textContent = rf ? "Valor atual (R$, opcional)" : "Preço atual (R$)";
+  $("f-pm").placeholder = rf ? "Ex.: 10000" : "Ex.: 32,50";
+  $("f-pa").placeholder = rf ? "Deixe vazio para estimar" : "Ex.: 35,10";
+  if (rf && !$("f-qtd").value) $("f-qtd").value = 1;
+  const idx = indexadorDoFormulario();
+  $("l-taxa").textContent = idx ? idx.rotuloTaxa : "Taxa";
+  $("h-taxa").textContent = idx ? idx.dica : "Escolha o indexador primeiro.";
+}
+
+// Preenche indexador, taxa, vencimento e isenção a partir do nome (ex.: "Tesouro IPCA+ 2035", "LCI").
+function aplicarPadraoRF() {
+  if (!TIPOS_RENDA_FIXA.includes(tipoDoFormulario())) return;
+  const nome = normalizar($("f-nome").value);
+  const padrao = PADROES_RENDA_FIXA.find(x => nome.includes(x.contem));
+  if (!padrao) return;
+  $("f-idx").value = INDEXADORES.find(x => x.id === padrao.idx).nome;
+  if (padrao.taxa !== undefined && !$("f-taxa").value) $("f-taxa").value = padrao.taxa;
+  const ano = (nome.match(/20\d\d/) || [])[0];
+  if (padrao.venc && ano && !$("f-venc").value) $("f-venc").value = `${ano}-${padrao.venc}`;
+  $("f-isento").checked = !!padrao.isento;
+  atualizarCamposRF();
+}
+
+["f-tipo", "f-idx"].forEach(id => $(id).addEventListener("input", atualizarCamposRF));
+$("f-nome").addEventListener("change", aplicarPadraoRF);
 
 function limparFormulario() {
   $("inv-form").reset();
@@ -1051,6 +1467,7 @@ function limparFormulario() {
   $("form-title").textContent = "Adicionar investimento";
   $("save-btn").textContent = "Adicionar";
   $("cancel-edit").hidden = true;
+  atualizarCamposRF();
 }
 
 $("inv-form").addEventListener("submit", e => {
@@ -1064,6 +1481,29 @@ $("inv-form").addEventListener("submit", e => {
     precoMedio: +$("f-pm").value,
     precoAtual: +$("f-pa").value,
   };
+  if (TIPOS_RENDA_FIXA.includes(dados.tipo)) {
+    const idx = indexadorDoFormulario();
+    Object.assign(dados, {
+      idx: idx ? idx.id : "",
+      taxa: +$("f-taxa").value || 0,
+      aplicacao: $("f-aplic").value,
+      vencimento: $("f-venc").value,
+      isento: $("f-isento").checked,
+    });
+    if ($("f-idx").value && !idx) {
+      $("form-msg").textContent = "Escolha um indexador da lista: " + INDEXADORES.map(x => x.nome).join(", ") + ".";
+      return;
+    }
+    if (dados.aplicacao && dados.vencimento && dados.vencimento <= dados.aplicacao) {
+      $("form-msg").textContent = "O vencimento precisa ser depois da data de aplicação.";
+      return;
+    }
+    // Sem valor atual: estima pelo tempo desde a aplicação.
+    if (!(dados.precoAtual > 0)) dados.precoAtual = +estimarValorAtual(dados.precoMedio, dados.idx, dados.taxa, dados.aplicacao).toFixed(2);
+  } else if (!(dados.precoAtual > 0)) {
+    $("form-msg").textContent = "Informe o preço atual.";
+    return;
+  }
   if (!dados.tipo) {
     $("form-msg").textContent = "Escolha um tipo da lista: " + TIPOS.map(t => t.nome).join(", ") + ".";
     return;
@@ -1097,6 +1537,11 @@ $("inv-body").addEventListener("click", e => {
     estado.editandoId = i.id;
     $("f-nome").value = i.nome; $("f-ticker").value = i.ticker; $("f-tipo").value = nomeTipo(i.tipo); $("f-banco").value = i.banco || "";
     $("f-qtd").value = i.quantidade; $("f-pm").value = i.precoMedio; $("f-pa").value = i.precoAtual;
+    $("f-idx").value = i.idx ? INDEXADORES.find(x => x.id === i.idx).nome : "";
+    $("f-taxa").value = i.taxa ?? ""; $("f-aplic").value = i.aplicacao || ""; $("f-venc").value = i.vencimento || "";
+    $("f-isento").checked = !!i.isento;
+    atualizarCamposRF();
+    mudarAba("investimentos");
     $("form-title").textContent = `Editar ${i.ticker || i.nome}`;
     $("save-btn").textContent = "Salvar alterações";
     $("cancel-edit").hidden = false;
@@ -1116,18 +1561,219 @@ $("inv-body").addEventListener("click", e => {
   }
 });
 
-$("presets").innerHTML = TAXAS_REFERENCIA.map(t =>
-  `<button class="chip" data-taxa="${t.taxa}">${esc(t.nome)} · ${t.taxa.toLocaleString("pt-BR")}%</button>`).join("");
+$("presets").innerHTML = TAXAS_REFERENCIA.map((t, n) =>
+  `<button class="chip" data-n="${n}" data-idx="${t.idx}" data-taxa="${t.taxa}">${esc(t.nome)}</button>`).join("");
 $("presets").addEventListener("click", e => {
   const c = e.target.closest(".chip");
-  if (c) { $("s-taxa").value = c.dataset.taxa; renderSimulador(); }
+  if (!c) return;
+  const t = TAXAS_REFERENCIA[+c.dataset.n];
+  $("s-idx").value = RENDIMENTOS_SIMULADOR.find(r => r.id === t.idx).nome;
+  $("s-taxa").value = t.taxa;
+  $("s-ir").checked = !t.isento && t.idx !== "fixa";
+  renderSimulador();
 });
-["s-inicial", "s-mensal", "s-anos", "s-taxa"].forEach(id => $(id).addEventListener("input", renderSimulador));
+["s-inicial", "s-mensal", "s-anos", "s-taxa", "s-idx", "s-ir"].forEach(id => $(id).addEventListener("input", renderSimulador));
+$("s-ir").addEventListener("change", renderSimulador);
+
+/* ---------- Renda fixa: botões e premissas ---------- */
+function irParaCadastroRF() {
+  limparFormulario();
+  $("f-tipo").value = "Renda fixa";
+  if (estado.banco !== TODOS) $("f-banco").value = estado.banco;
+  atualizarCamposRF();
+  mudarAba("investimentos");
+  $("f-nome").focus();
+}
+$("rf-add").addEventListener("click", irParaCadastroRF);
+$("rf-add2").addEventListener("click", irParaCadastroRF);
+
+["p-cdi", "p-selic", "p-ipca"].forEach(id => $(id).addEventListener("input", () => {
+  const v = +$(id).value;
+  if (!(v >= 0) || $(id).value === "") return;
+  estado.premissas[id.slice(2)] = v;
+  Local.gravar(CHAVE_PREMISSAS, estado.premissas);
+  renderRendaFixa();
+  renderSimulador();
+}));
+
+/* =====================================================================
+   6b. MEU PERFIL
+   Máscaras, validação (CPF, celular, e-mail, CEP) e busca de endereço pelo CEP.
+   ===================================================================== */
+const soDigitos = t => String(t || "").replace(/\D/g, "");
+
+const Mascara = {
+  cpf: t => soDigitos(t).slice(0, 11).replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2"),
+  celular: t => {
+    const d = soDigitos(t).slice(0, 11);
+    if (d.length <= 2) return d.length ? `(${d}` : "";
+    if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  },
+  cep: t => soDigitos(t).slice(0, 8).replace(/(\d{5})(\d)/, "$1-$2"),
+};
+
+// Confere os dois dígitos verificadores do CPF.
+function cpfValido(t) {
+  const d = soDigitos(t);
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  for (const n of [9, 10]) {
+    let soma = 0;
+    for (let i = 0; i < n; i++) soma += +d[i] * (n + 1 - i);
+    const dv = (soma * 10) % 11 % 10;
+    if (dv !== +d[n]) return false;
+  }
+  return true;
+}
+
+const Validar = {
+  cpf: v => !v || cpfValido(v) ? "" : "CPF inválido. Confira os números.",
+  cel: v => !v || /^\d{10,11}$/.test(soDigitos(v)) ? "" : "Use DDD + número, ex.: (11) 91234-5678.",
+  email: v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? "" : "E-mail inválido, ex.: voce@gmail.com.",
+  cep: v => !v || soDigitos(v).length === 8 ? "" : "O CEP tem 8 números.",
+  uf: v => !v || UFS.includes(v.toUpperCase()) ? "" : "Use a sigla do estado, ex.: SP.",
+  nasc: v => {
+    if (!v) return "";
+    const d = lerData(v), idade = (hoje() - d) / (365.25 * DIA);
+    return d > hoje() ? "A data não pode ser no futuro." : idade > 120 ? "Confira o ano de nascimento." : "";
+  },
+};
+
+const CAMPOS_PERFIL = ["nome", "apelido", "cpf", "nasc", "cel", "email", "prof", "renda", "cep", "rua", "num", "comp", "bairro", "cidade", "uf", "perfil", "objetivo"];
+
+function mostrarErro(campo, msg) {
+  const e = $("e-" + campo);
+  if (e) e.textContent = msg;
+  $("pf-" + campo).setAttribute("aria-invalid", msg ? "true" : "false");
+}
+function validarCampo(campo) {
+  const regra = Validar[campo];
+  const msg = regra ? regra($("pf-" + campo).value.trim()) : "";
+  mostrarErro(campo, msg);
+  return !msg;
+}
+
+function idadeDe(nasc) {
+  const d = lerData(nasc), h = hoje();
+  let idade = h.getFullYear() - d.getFullYear();
+  if (h < new Date(h.getFullYear(), d.getMonth(), d.getDate())) idade--;
+  return idade;
+}
+function diasParaAniversario(nasc) {
+  const d = lerData(nasc), h = hoje();
+  let prox = new Date(h.getFullYear(), d.getMonth(), d.getDate());
+  if (prox < h) prox = new Date(h.getFullYear() + 1, d.getMonth(), d.getDate());
+  return diasEntre(h, prox);
+}
+const cpfOculto = c => soDigitos(c).length === 11 ? `***.${soDigitos(c).slice(3, 6)}.${soDigitos(c).slice(6, 9)}-**` : "";
+
+function renderPerfil() {
+  const p = estado.perfil;
+  CAMPOS_PERFIL.forEach(c => { if (document.activeElement !== $("pf-" + c)) $("pf-" + c).value = p[c] ?? ""; });
+  const nome = (p.apelido || (p.nome || "").split(" ")[0] || "").trim();
+  const iniciais = (p.nome || p.apelido || "").trim().split(/\s+/).filter(Boolean);
+  $("pf-avatar").textContent = iniciais.length ? (iniciais[0][0] + (iniciais.length > 1 ? iniciais[iniciais.length - 1][0] : "")).toUpperCase() : "?";
+  $("pf-titulo").textContent = p.nome || "Seu perfil";
+  const fatos = [];
+  if (p.nasc) {
+    const dias = diasParaAniversario(p.nasc);
+    fatos.push(`${idadeDe(p.nasc)} anos`);
+    fatos.push(dias === 0 ? "Feliz aniversário!" : `aniversário em ${dias} dia${dias > 1 ? "s" : ""}`);
+  }
+  if (p.perfil) fatos.push("perfil " + p.perfil.toLowerCase());
+  if (p.cpf) fatos.push("CPF " + cpfOculto(p.cpf));
+  if (p.cidade) fatos.push(p.cidade + (p.uf ? "/" + p.uf : ""));
+  $("pf-fatos").innerHTML = fatos.length ? fatos.map(f => `<span class="tag">${esc(f)}</span>`).join("") : `<span class="hint">Preencha seus dados abaixo.</span>`;
+  // Cumprimento no topo da página inicial.
+  if (estado.banco === TODOS && nome) $("hero-label").textContent = `Olá, ${nome}! Sua carteira vale hoje`;
+}
+
+// Máscaras enquanto digita.
+[["cpf", Mascara.cpf], ["cel", Mascara.celular], ["cep", Mascara.cep]].forEach(([c, m]) =>
+  $("pf-" + c).addEventListener("input", () => { $("pf-" + c).value = m($("pf-" + c).value); mostrarErro(c, ""); }));
+Object.keys(Validar).forEach(c => $("pf-" + c).addEventListener("blur", () => validarCampo(c)));
+$("pf-uf").addEventListener("input", () => { $("pf-uf").value = $("pf-uf").value.toUpperCase(); });
+
+// Busca o endereço no ViaCEP quando o CEP tem 8 números. Se não der, o usuário preenche à mão.
+let ultimoCep = "";
+$("pf-cep").addEventListener("input", async () => {
+  const cep = soDigitos($("pf-cep").value);
+  if (cep.length !== 8 || cep === ultimoCep) return;
+  ultimoCep = cep;
+  $("h-cep").textContent = "Buscando endereço...";
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const d = await r.json();
+    if (d.erro) throw new Error("CEP não encontrado");
+    $("pf-rua").value = d.logradouro || $("pf-rua").value;
+    $("pf-bairro").value = d.bairro || $("pf-bairro").value;
+    $("pf-cidade").value = d.localidade || $("pf-cidade").value;
+    $("pf-uf").value = d.uf || $("pf-uf").value;
+    $("h-cep").textContent = "Endereço preenchido. Confira e informe o número.";
+    $("pf-num").focus();
+  } catch (err) {
+    $("h-cep").textContent = err.message === "CEP não encontrado"
+      ? "CEP não encontrado. Confira os números ou preencha o endereço."
+      : "Não foi possível buscar o CEP agora. Preencha o endereço manualmente.";
+  }
+});
+
+$("pf-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const ok = Object.keys(Validar).map(validarCampo).every(Boolean);
+  if (!ok) { $("pf-msg").textContent = "Corrija os campos marcados em vermelho."; return; }
+  const dados = {};
+  CAMPOS_PERFIL.forEach(c => { const v = $("pf-" + c).value.trim(); if (v) dados[c] = c === "uf" ? v.toUpperCase() : v; });
+  estado.perfil = dados;
+  $("pf-msg").textContent = Local.gravar(CHAVE_PERFIL, dados) ? "Perfil salvo neste navegador." : "Não foi possível salvar: o navegador bloqueou o armazenamento.";
+  renderPerfil();
+  renderResumo();
+});
+
+$("pf-apagar").addEventListener("click", e => {
+  const b = e.currentTarget;
+  if (!b.classList.contains("armed")) {
+    b.classList.add("armed"); b.textContent = "Confirmar: apagar tudo do perfil";
+    setTimeout(() => { b.classList.remove("armed"); b.textContent = "Apagar meus dados"; }, 4000);
+    return;
+  }
+  b.classList.remove("armed"); b.textContent = "Apagar meus dados";
+  estado.perfil = {};
+  Local.apagar(CHAVE_PERFIL);
+  CAMPOS_PERFIL.forEach(c => { $("pf-" + c).value = ""; mostrarErro(c, ""); });
+  $("pf-msg").textContent = "Seus dados do perfil foram apagados deste navegador.";
+  renderPerfil();
+  renderResumo();
+});
+
+// Autocompletar do perfil.
+autocompletar($("pf-apelido"), () => {
+  const n = $("pf-nome").value.trim().split(/\s+/).filter(Boolean);
+  return n.length ? [{ valor: n[0], principal: n[0], detalhe: "primeiro nome" }] : [];
+});
+autocompletar($("pf-email"), texto => {
+  const [usuario, dominio = ""] = texto.split("@");
+  if (!usuario) return [];
+  return DOMINIOS_EMAIL.filter(d => d.startsWith(dominio.toLowerCase()))
+    .map(d => ({ valor: `${usuario}@${d}`, principal: `${usuario}@${d}` }));
+});
+autocompletar($("pf-prof"), texto => filtrarPor(PROFISSOES.map(nome => ({ nome })), texto, ["nome"]).map(p => ({ valor: p.nome, principal: p.nome })));
+autocompletar($("pf-renda"), sugerirNumeros(() => [1500, 3000, 5000, 8000, 10000, 15000, 20000].map(reais)));
+autocompletar($("pf-comp"), texto => COMPLEMENTOS.filter(c => normalizar(c).startsWith(normalizar(texto)))
+  .map(c => ({ valor: c, principal: c.trim() })));
+autocompletar($("pf-uf"), texto => UFS.filter(u => u.startsWith(texto.toUpperCase())).map(u => ({ valor: u, principal: u })));
+autocompletar($("pf-perfil"), texto => filtrarPor(PERFIS_INVESTIDOR, texto, ["nome"])
+  .map(p => ({ valor: p.nome, principal: p.nome, detalhe: p.detalhe })));
+autocompletar($("pf-objetivo"), texto => filtrarPor(OBJETIVOS.map(nome => ({ nome })), texto, ["nome"]).map(o => ({ valor: o.nome, principal: o.nome })));
 
 /* =====================================================================
    7. INICIALIZAÇÃO
    ===================================================================== */
+renderPremissas();
 renderTudo();
+renderPerfil();
+renderResumo();
 renderSimulador();
 fonteDeDados.maioresAltas().then(renderAltas);
 fonteDeDados.noticias().then(renderNoticias);
